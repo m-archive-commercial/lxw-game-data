@@ -5,7 +5,7 @@ create: Aug 13, 2022, 22:31
 """
 from enum import Enum
 
-from pydantic import BaseModel, conint, confloat
+from pydantic import BaseModel, conint, confloat, validator
 
 
 class FeatDifficultyLevel(int, Enum):
@@ -71,7 +71,41 @@ class FeatureModel(BaseModel):
     signalTimes: strict_int(le=20)
     impulseTimes: strict_int(le=20)
     morePolicy: bool
-    lifetime: strict_int(le=5 * 60)  # max: 5 min
+    lifetime: strict_int(le=(20 >> 1 + 1) * 60)  # max: 660
+
+    @validator('lifetime')
+    def validate_lifetime(self, v, fields):
+        assert v >= fields['score'] / 200 * 660 * 0.5, \
+            f"lifetime should be linear to score"
+
+        assert v >= fields['clickRate'] / 3000 * 660 * 0.5, \
+            f"lifetime should be linear to clickRate"
+
+        if fields['duration'] == 1:
+            assert v >= 60 and v % 30 == 0, \
+                f"when duration = 1, lifetime >= 60, and lifetime % 30 = 0"
+            assert v == 60 + fields['batteryTimes'] * 30, \
+                f"when duration = 1, lifetime = 60 + batteryTimes * 30"
+
+    @validator('hitRate')
+    def validate_hitRate(self, v, fields):
+        assert v >= fields['score'] / 200 * 200 * 0.5, \
+            f"hitRate should be linear to score"
+
+    @validator('isUpload')
+    def validate_isUpload(self, v, fields):
+        if v == 0:
+            assert fields['isRealScore'] == -1, \
+                f"when isUpload = 0, then isRealScore = -1"
+
+    @validator('impulseTimes')
+    def validate_impulseTimes(self, v, fields):
+        assert v < (
+            fields['batteryTimes'] +
+            fields['filterLenTimes'] +
+            fields['signalTimes']
+        ) >> 1, \
+            f"impulseTimes < 1/2 * (batteryTimes + filterLenTimes + signalTimes)"
 
 
 if __name__ == '__main__':
