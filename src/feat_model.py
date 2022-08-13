@@ -5,7 +5,7 @@ create: Aug 13, 2022, 22:31
 """
 from enum import Enum
 
-from pydantic import BaseModel, confloat, conint
+from pydantic import BaseModel, conint, confloat
 
 
 class FeatDifficultyLevel(int, Enum):
@@ -26,8 +26,16 @@ class FeatIsRealScore(int, Enum):
     DATA_DIFF = 1
 
 
-def conpercent():
-    return confloat(strict=True, ge=0, le=1)
+def strict_int(le: int):
+    return conint(strict=True, ge=0, le=le)
+
+
+def strict_float(le: float):
+    return confloat(strict=True, le=le)
+
+
+def strict_percent():
+    return strict_float(le=1)
 
 
 class FeatureModel(BaseModel):
@@ -37,33 +45,33 @@ class FeatureModel(BaseModel):
         2. add stat constraint
     """
 
-    storyTime: confloat(strict=True, ge=0, le=100)  # 平均10，通常5-30
-    tutorialTime: confloat(strict=True, ge=0, le=100)  # 平均18，通常5-40
+    storyTime: strict_float(le=100)  # 平均10，通常5-30
+    tutorialTime: strict_float(le=100)  # 平均18，通常5-40
     duration: bool  # 0. 中途退出，1. 坚持最后
-    score: confloat(strict=True, ge=0, le=200)  # 平均40，通常5-100
+    score: strict_float(le=200)  # 平均40，通常5-100
     difficultyLevel: FeatDifficultyLevel
     replayTimes: bool  # 0. 不重玩 1. 重玩
-    hitRate: conpercent()
-    badRate: conpercent()
-    mismatchRate: conpercent()
-    keepaway: confloat(ge=0, le=200)
-    feedback: conpercent()
-    goodRate: conpercent()
-    moveNum: confloat(ge=0, le=200)
-    clickRate: confloat(ge=0, le=3000)
-    npcHitRate: conpercent()
-    getbackRate: conpercent()
+    hitRate: strict_percent()
+    badRate: strict_percent()
+    mismatchRate: strict_percent()
+    keepaway: strict_float(le=200)
+    feedback: strict_percent()
+    goodRate: strict_percent()
+    moveNum: strict_float(le=200)
+    clickRate: strict_float(le=3000)
+    npcHitRate: strict_percent()
+    getbackRate: strict_percent()
     isAcceptGift: bool
     giftType: FeatGiftType
     isUpload: bool
     isRealScore: FeatIsRealScore
     bugTimes: bool
-    batteryTimes: conint(ge=0, le=20)
-    filterLenTimes: conint(ge=0, le=20)
-    signalTimes: conint(ge=0, le=20)
-    impulseTimes: conint(ge=0, le=20)
+    batteryTimes: strict_int(le=20)
+    filterLenTimes: strict_int(le=20)
+    signalTimes: strict_int(le=20)
+    impulseTimes: strict_int(le=20)
     morePolicy: bool
-    lifetime: conint(ge=0, le=5 * 60)  # max: 5 min
+    lifetime: strict_int(le=5 * 60)  # max: 5 min
 
 
 if __name__ == '__main__':
