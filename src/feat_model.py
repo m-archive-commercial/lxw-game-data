@@ -38,7 +38,7 @@ def strict_percent():
     return strict_float(le=1)
 
 
-class FeatureModel(BaseModel):
+class FeatModel(BaseModel):
     """
     todo:
         1. add help/description on each field
@@ -74,42 +74,45 @@ class FeatureModel(BaseModel):
     lifetime: strict_int(le=(20 >> 1 + 1) * 60)  # max: 660
 
     @validator('lifetime')
-    def validate_lifetime(self, v, fields):
-        assert v >= fields['score'] / 200 * 660 * 0.5, \
+    def validate_lifetime(cls, v, values, **kwargs):
+        assert v >= values['score'] / 200 * 660 * 0.5, \
             f"lifetime should be linear to score"
 
-        assert v >= fields['clickRate'] / 3000 * 660 * 0.5, \
+        assert v >= values['clickRate'] / 3000 * 660 * 0.5, \
             f"lifetime should be linear to clickRate"
 
-        if fields['duration'] == 1:
+        if values['duration'] == 1:
             assert v >= 60 and v % 30 == 0, \
                 f"when duration = 1, lifetime >= 60, and lifetime % 30 = 0"
-            assert v == 60 + fields['batteryTimes'] * 30, \
+            assert v == 60 + values['batteryTimes'] * 30, \
                 f"when duration = 1, lifetime = 60 + batteryTimes * 30"
 
     @validator('hitRate')
-    def validate_hitRate(self, v, fields):
-        assert v >= fields['score'] / 200 * 200 * 0.5, \
+    def validate_hitRate(cls, v, values, **kwargs):
+        assert v >= values['score'] / 200 * 200 * 0.5, \
             f"hitRate should be linear to score"
 
-    @validator('isUpload')
-    def validate_isUpload(self, v, fields):
-        if v == 0:
-            assert fields['isRealScore'] == -1, \
+    """
+    验证的字段必须出现在需要的字段之后
+    """
+    @validator('isRealScore')
+    def validate_isRealScore(cls, v, values, **kwargs):
+        if values['isUpload'] == 0:
+            assert v == -1, \
                 f"when isUpload = 0, then isRealScore = -1"
 
     @validator('impulseTimes')
-    def validate_impulseTimes(self, v, fields):
-        assert v < (
-            fields['batteryTimes'] +
-            fields['filterLenTimes'] +
-            fields['signalTimes']
+    def validate_impulseTimes(cls, v, values, **kwargs):
+        assert v <= (
+            values['batteryTimes'] +
+            values['filterLenTimes'] +
+            values['signalTimes']
         ) >> 1, \
-            f"impulseTimes < 1/2 * (batteryTimes + filterLenTimes + signalTimes)"
+            f"impulseTimes <= 1/2 * (batteryTimes + filterLenTimes + signalTimes)"
 
 
 if __name__ == '__main__':
-    feat = FeatureModel(
+    feat = FeatModel(
         storyTime=0.,
         tutorialTime=0.,
         duration=0,
@@ -129,13 +132,13 @@ if __name__ == '__main__':
         isAcceptGift=0,
         giftType=0,
         isUpload=0,
-        isRealScore=0,
+        isRealScore=-1,
         bugTimes=0,
         batteryTimes=0,
         filterLenTimes=0,
         signalTimes=0,
         impulseTimes=0,
         morePolicy=0,
-        lifetime=0,
+        lifetime='s',
     )
     print('feat', feat)
