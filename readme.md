@@ -1,5 +1,17 @@
 ## Usage
 
+### running
+
+```shell
+cd src
+
+# check help
+python feat_generator.py -h
+
+# generate 500 valid sample and dump to csv
+python feat_generator.py -n 500 -d
+```
+
 ### running result
 
 ```text
