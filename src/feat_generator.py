@@ -3,16 +3,21 @@ source: own
 author: https://github.com/MarkShawn2020
 create: Aug 14, 2022, 00:36
 """
+from __future__ import annotations
 
+import argparse
 from typing import List, Type
 
 import numpy as np
+import pandas as pd
 import tqdm
 
+from config.model import DEFAULT_XDATA
+from ds import ExtendedEnum, FeatDifficultyLevel, FeatGiftType, FeatRealScore
 from feat_model import FeatModel
 from solver.baseSolver import BaseSolver
 from solver.polynomialSolver import PolynomialSolver
-from utils.ds import ExtendedEnum, FeatDifficultyLevel, FeatGiftType, FeatRealScore
+from utils.config_path import OUTPUT_DIR
 from utils.log import get_logger
 from utils.regenerate_field import regenerate
 from utils.validator_feats import validateHitRate, validateImpulseTimes, validateLifetime
@@ -27,24 +32,25 @@ class FeatGenerator:
         solver: BaseSolver,
         nTargetModelsValid=500,
         nTargetModelsEpoch=1,
-        nMaxGenerateRetry=10
+        nMaxGenerateRetries=10
     ):
         """
 
         :param solver:
         :param nTargetModelsEpoch:
-        :param nMaxGenerateRetry: tested: when 5, then failed [88/500]
+        :param nMaxGenerateRetries: tested: when 5, then failed [88/500]
         """
         self._solver = solver
-        self.target_models_cnt = nTargetModelsEpoch
-        self.maxGenerateTries = nMaxGenerateRetry
+        self.nTargetModelsValid = nTargetModelsValid
+        self.nTargetModelsEpoch = nTargetModelsEpoch
+        self.nMaxGenerateRetries = nMaxGenerateRetries
 
         self._feat_models: List[FeatModel] = []
 
-        logger.debug(f'solver: {self._solver}, target_models_cnt: {self.target_models_cnt}')
+        logger.debug(f'solver: {self._solver}, target_models_cnt: {self.nTargetModelsEpoch}')
 
     def _gen_floats(self, ys):
-        return self._solver.fit(ys).generate(self.target_models_cnt)
+        return self._solver.fit(ys).generate(self.nTargetModelsEpoch)
 
     def _gen_ints(self, ys):
         """
@@ -62,14 +68,14 @@ class FeatGenerator:
         return self._gen_floats(self._solver.xdata)
 
     def _gen_bools(self):
-        return np.random.random(self.target_models_cnt) > 0.5
+        return np.random.random(self.nTargetModelsEpoch) > 0.5
 
     def _gen_choices(self, choices: Type[ExtendedEnum]):
         """
         :param choices: Type[Enum] need
         :return:
         """
-        return np.random.choice(choices, self.target_models_cnt)
+        return np.random.choice(choices, self.nTargetModelsEpoch)
 
     def _genFeatOfLifetime(self, batteryTimes):
         """
@@ -95,7 +101,7 @@ class FeatGenerator:
         score, clickRate, duration, batteryTimes --> lifetime
         batteryTimes, filterLenTimes, signalTimes --> impulseTimes
         """
-        assert have_tried < self.maxGenerateTries, f"gen featModel failed for {self.maxGenerateTries} tries"
+        assert have_tried < self.nMaxGenerateRetries, f"gen featModel failed for {self.nMaxGenerateRetries} tries"
 
         score = self._gen_floats((0, 5, 40, 100, 200))[0]
         hitRate = self._gen_percents()[0]
@@ -144,8 +150,10 @@ class FeatGenerator:
 
     def genFeatModel(self) -> FeatModel:
 
+        predata = self.preGenFeatModel()
+
         data = dict(
-            **self.preGenFeatModel(),
+            **predata,
             storyTime=self._gen_floats((0, 5, 10, 30, 100))[0],
             tutorialTime=self._gen_floats((0, 5, 18, 40, 100))[0],
             difficultyLevel=self._gen_choices(FeatDifficultyLevel)[0],
@@ -168,15 +176,58 @@ class FeatGenerator:
         logger.debug(f'generated feat model: {feat_model}')
         return feat_model
 
+    def genFeatModels(self) -> FeatGenerator:
+        total_tries = 0
+        failed_tries = 0
+        for _ in tqdm.tqdm(range(self.nTargetModelsValid)):
+            while True:
+                try:
+                    total_tries += 1
+                    self.genFeatModel()
+                except:
+                    failed_tries += 1
+                else:
+                    break
+        logger.info({
+            "config": {
+                "target models": self.nTargetModelsValid,
+                "max retries"  : self.nMaxGenerateRetries,
+            },
+            "tries" : {
+                "failed": failed_tries,
+                "total" : total_tries
+            }
+        })
+        return self
+
+    def dump(self):
+        df = pd.DataFrame([dict(i) for i in self._feat_models])
+        fp = OUTPUT_DIR / 'feat_models.csv'
+        df.to_csv(fp.__str__(), encoding='utf_8', )
+        logger.info(f'dumped to file://{fp}')
+
 
 if __name__ == '__main__':
-    gSolver: BaseSolver = PolynomialSolver(xdata=[0, 0.25, 0.5, 0.75, 0.97])
-    gFeatGenerator = FeatGenerator(gSolver, nMaxGenerateRetry=10)
-    failed_cnt = 0
-    total_cnt = 500
-    for i in tqdm.tqdm(range(total_cnt)):
-        try:
-            gFeatGenerator.genFeatModel()
-        except:
-            failed_cnt += 1
-    logger.info(f'maxGenerateTries: {gFeatGenerator.maxGenerateTries}, failed: [{failed_cnt}/{total_cnt}]')
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-n', '--nTargetModelsValid', default=10, type=int,
+        help='number of target models to be generated, e.g. 500'
+    )
+    parser.add_argument(
+        '-d', '--dump', action='store_true',
+        help='dump the feature models to file'
+    )
+    parser.add_argument(
+        '--nMaxGenerateRetries', default=10,
+        help='number of retrying to generate models in each epoch, recommending 5-10'
+    )
+    args = parser.parse_args()
+
+    gSolver: BaseSolver = PolynomialSolver(xdata=DEFAULT_XDATA)
+    gFeatGenerator = FeatGenerator(
+        gSolver,
+        nTargetModelsValid=args.nTargetModelsValid,
+        nMaxGenerateRetries=args.nMaxGenerateRetries
+    ).genFeatModels()
+    if args.dump:
+        gFeatGenerator.dump()

@@ -4,15 +4,17 @@ ref: https://www.toptal.com/python/in-depth-python-logging#python-logging-best-p
 """
 import logging
 import os.path
-import pathlib
 import sys
 from logging.handlers import TimedRotatingFileHandler
 
-from os.path import abspath
+from utils.config_path import LOGS_DIR
 
-LOG_DIR = pathlib.Path(abspath(__file__)) / "../../logs"
 
-FORMATTER = logging.Formatter("%(asctime)s — %(name)s — %(levelname)s — %(message)s")
+FORMATTER = logging.Formatter(
+    # ref: https://stackoverflow.com/a/44401529/9422455
+    '%(asctime)s, %(levelname)-8s [%(filename)s:%(module)s:%(funcName)s:%(lineno)d] %(message)s'
+    # "%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] <%(name)s> %(message)s"
+)
 
 
 def get_console_handler(level=logging.INFO):
@@ -23,7 +25,7 @@ def get_console_handler(level=logging.INFO):
 
 
 def get_file_handler(filename="track.log", level=logging.DEBUG):
-    file_handler = TimedRotatingFileHandler(os.path.join(LOG_DIR, filename), when='midnight')
+    file_handler = TimedRotatingFileHandler(os.path.join(LOGS_DIR, filename), when='midnight')
     file_handler.setFormatter(FORMATTER)
     file_handler.setLevel(level)
     return file_handler

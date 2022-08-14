@@ -3,7 +3,7 @@ source: own
 author: https://github.com/MarkShawn2020
 create: Aug 15, 2022, 00:46
 """
-from .ds import FeatRealScore
+from ds import FeatRealScore
 
 
 def validateHitRate(v, values):
@@ -11,10 +11,10 @@ def validateHitRate(v, values):
         f"hitRate should be linear to score"
 
 
-def validateRealScore(v: FeatRealScore, values):
-    if values['isUpload'] == 0:
+def validateRealScore(v, values):
+    if not values['isUpload']:
         assert v == FeatRealScore.NO_DATA, \
-            f"when isUpload = 0, should isRealScore({v}) = FeatIsRealScore.NO_DATA"
+            f"when isUpload = 0, should realScore({v}) = FeatIsRealScore.NO_DATA"
 
 
 def validateImpulseTimes(v, values):

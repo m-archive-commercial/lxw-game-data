@@ -2,6 +2,10 @@
 source: own
 author: https://github.com/MarkShawn2020
 create: Aug 15, 2022, 01:02
+notes:
+    1. keep in mind that we should put `int` in the Enum Base,
+        so that it can export the valid int value,
+        especially when dumping into a csv file in Pandas.
 """
 from enum import Enum
 
@@ -16,19 +20,19 @@ class ExtendedEnum(Enum):
         return list(map(lambda i: i.value, cls))
 
 
-class FeatDifficultyLevel(ExtendedEnum):
+class FeatDifficultyLevel(int, ExtendedEnum):
     EASY = 0
     MID = 1
     HARD = 2
 
 
-class FeatGiftType(ExtendedEnum):
+class FeatGiftType(int, ExtendedEnum):
     GOOD = 0
     BAD = 1
     NONE = 2
 
 
-class FeatRealScore(ExtendedEnum):
+class FeatRealScore(int, ExtendedEnum):
     NO_DATA = -1
     DATA_SAME = 0
     DATA_DIFF = 1

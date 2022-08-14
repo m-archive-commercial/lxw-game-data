@@ -8,7 +8,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from utils.ds import FeatRealScore
+from ds import FeatRealScore
 
 
 class TestFeatIsRealScore(TestCase):
