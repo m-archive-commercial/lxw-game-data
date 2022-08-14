@@ -10,11 +10,33 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
 
-from log import get_logger
+from utils.log import get_logger
 
 logger = get_logger('algo-curve-fit')
 
 FloatArrayLike = Union[np.array, List[float]]
+
+
+def to_fit(x, a1, a2, a3, a4, a5):
+    """
+    tks: 旭神
+    :param x:
+    :param a1:
+    :param a2:
+    :param a3:
+    :param a4:
+    :param a5:
+    :return:
+    """
+
+    def S(x, k=3):
+        return 1 / (1 + np.exp(-x * k))
+
+    return a1 * S((x - xs[0])) + \
+           a2 * S((x - xs[1])) + \
+           a3 * S((x - xs[2])) + \
+           a4 * S((x - xs[3])) + \
+           a5 * S((x - xs[4]))
 
 
 def _to_fit(x, _opts: List[float], _exps: Iterator[int]):
@@ -121,31 +143,30 @@ def sigmoid_period(xs: List[float], ys: List[float], x: float):
 if __name__ == '__main__':
     exps = [1, 3, 7, 15]
 
-
-    def to_fit(x, a, b, b2, c, d, e, f):
-        return \
-            + e * np.log(x + 1) / np.log(f + 1) \
-            + d / (1 + np.exp(-x * c))
-        # + a * x \
-        # + b * x ** 2 \
-        # + b2 * x ** 3 \
-        # + c * x ** 7 \
-        # + d * x ** 15
+    # def to_fit(x, a, b, b2, c, d, e, f):
+    #     return \
+    #         + e * np.log(x + 1) / np.log(f + 1) \
+    #         + d / (1 + np.exp(-x * c))
+    # + a * x \
+    # + b * x ** 2 \
+    # + b2 * x ** 3 \
+    # + c * x ** 7 \
+    # + d * x ** 15
 
 
     xs = [0, 0.25, 0.5, 0.75, 0.97]
-    sigma = [0.1, 1, 0.1, 1, 0.1]
+    sigma = [0.01, 1, 0.01, 1, 0.01]
     # ys = [0, 100, 830, 2000, 3000]
     ys = [0, 5, 10, 20, 100]
-    # opts = fit(xs, ys, draw=True, sigma=sigma)
+    opts = fit(xs, ys, draw=True, sigma=sigma)
     # gen(opts, ys, N=500, draw=True)
-
-    xs_plot = np.linspace(0, xs[-1], 500, endpoint=False)
-    ys_plot = [sigmoid_period(xs, ys, x) for x in xs_plot]
-    # logger.info({'xs_plot': xs_plot, 'ys_plot': ys_plot})
-    plt.plot(xs_plot, ys_plot, 'g-')
-    plt.plot(xs, ys, 'r+')
-    plt.show()
+    #
+    # xs_plot = np.linspace(0, xs[-1], 500, endpoint=False)
+    # ys_plot = [sigmoid_period(xs, ys, x) for x in xs_plot]
+    # # logger.info({'xs_plot': xs_plot, 'ys_plot': ys_plot})
+    # plt.plot(xs_plot, ys_plot, 'g-')
+    # plt.plot(xs, ys, 'r+')
+    # plt.show()
 
 
 # [0.    0.025 0.2   0.5   1.   ] -- 1 2 4

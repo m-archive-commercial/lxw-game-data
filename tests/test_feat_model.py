@@ -8,20 +8,20 @@ from unittest import TestCase
 
 import numpy as np
 
-from src.feat_model import FeatIsRealScore
+from utils.ds import FeatRealScore
 
 
 class TestFeatIsRealScore(TestCase):
     def test_enum(self):
 
-        self.assertEqual([-1, 0, 1], FeatIsRealScore.values())
+        self.assertEqual([-1, 0, 1], FeatRealScore.values())
 
-        enum_vals = np.random.choice(FeatIsRealScore.values(), 3)
+        enum_vals = np.random.choice(FeatRealScore.values(), 3)
         print('enum_vals: ', enum_vals)
         self.assertEqual(enum_vals.shape, (3,))
         # iterated unittest, ref: https://stackoverflow.com/a/45736718/9422455
         self.assertTrue(any(v in [0, -1, 1] for v in enum_vals))
 
-        chosen = random.choice(FeatIsRealScore.values())
+        chosen = random.choice(FeatRealScore.values())
         print('chosen: ', chosen)
         self.assertIn(chosen, [-1, 0, 1])

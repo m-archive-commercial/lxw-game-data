@@ -4,11 +4,13 @@ ref: https://www.toptal.com/python/in-depth-python-logging#python-logging-best-p
 """
 import logging
 import os.path
+import pathlib
 import sys
 from logging.handlers import TimedRotatingFileHandler
 
-# customize your LOG_DIR
-LOG_DIR = ".."
+from os.path import abspath
+
+LOG_DIR = pathlib.Path(abspath(__file__)) / "../../logs"
 
 FORMATTER = logging.Formatter("%(asctime)s — %(name)s — %(levelname)s — %(message)s")
 
