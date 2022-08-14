@@ -7,31 +7,50 @@ from enum import Enum
 
 from pydantic import BaseModel, conint, confloat, validator
 
+from log import get_logger
 
-class FeatDifficultyLevel(int, Enum):
-    EAST = 0
+logger = get_logger("FeatModel")
+
+
+class ExtendedEnum(Enum):
+    """
+    ref: https://stackoverflow.com/a/54919285/9422455
+    """
+
+    @classmethod
+    def values(cls):
+        return list(map(lambda i: i.value, cls))
+
+
+class FeatDifficultyLevel(ExtendedEnum):
+    EASY = 0
     MID = 1
     HARD = 2
 
 
-class FeatGiftType(int, Enum):
+class FeatGiftType(ExtendedEnum):
     GOOD = 0
     BAD = 1
     NONE = 2
 
 
-class FeatIsRealScore(int, Enum):
+class FeatIsRealScore(ExtendedEnum):
     NO_DATA = -1
     DATA_SAME = 0
     DATA_DIFF = 1
 
 
 def strict_int(le: int):
-    return conint(strict=True, ge=0, le=le)
+    """
+    cannot use strict for int, with np.int
+    :param le:
+    :return:
+    """
+    return conint(strict=False, ge=0, le=le)
 
 
 def strict_float(le: float):
-    return confloat(strict=True, le=le)
+    return confloat(strict=True, ge=0, le=le)
 
 
 def strict_percent():
@@ -45,20 +64,20 @@ class FeatModel(BaseModel):
         2. add stat constraint
     """
 
-    storyTime: strict_float(le=100)  # 平均10，通常5-30
-    tutorialTime: strict_float(le=100)  # 平均18，通常5-40
+    storyTime: strict_float(le=100)  # (5, 10, 30)
+    tutorialTime: strict_float(le=100)  # (5, 18, 40)
     duration: bool  # 0. 中途退出，1. 坚持最后
-    score: strict_float(le=200)  # 平均40，通常5-100
+    score: strict_float(le=200)  # (5, 40, 100)
     difficultyLevel: FeatDifficultyLevel
     replayTimes: bool  # 0. 不重玩 1. 重玩
     hitRate: strict_percent()
     badRate: strict_percent()
     mismatchRate: strict_percent()
-    keepaway: strict_float(le=200)
+    keepaway: strict_float(le=200)  # (5, 60, 100)
     feedback: strict_percent()
     goodRate: strict_percent()
-    moveNum: strict_float(le=200)
-    clickRate: strict_float(le=3000)
+    moveNum: strict_float(le=200)  # (5, 40, 100)
+    clickRate: strict_float(le=3000)  # (100, 830, 2000)
     npcHitRate: strict_percent()
     getbackRate: strict_percent()
     isAcceptGift: bool
@@ -66,15 +85,15 @@ class FeatModel(BaseModel):
     isUpload: bool
     isRealScore: FeatIsRealScore
     bugTimes: bool
-    batteryTimes: strict_int(le=20)
-    filterLenTimes: strict_int(le=20)
-    signalTimes: strict_int(le=20)
-    impulseTimes: strict_int(le=20)
+    batteryTimes: strict_int(le=20)  # (0, 2, 5)
+    filterLenTimes: strict_int(le=20)  # (0,2,5)
+    signalTimes: strict_int(le=20)  # (0,2,5)
+    impulseTimes: strict_int(le=20)  # (0, 2,5)
     morePolicy: bool
     lifetime: strict_int(le=(20 >> 1 + 1) * 60)  # max: 660
 
     @validator('lifetime')
-    def validate_lifetime(cls, v, values, **kwargs):
+    def validate_lifetime(cls, v, values):
         assert v >= values['score'] / 200 * 660 * 0.5, \
             f"lifetime should be linear to score"
 
@@ -88,21 +107,22 @@ class FeatModel(BaseModel):
                 f"when duration = 1, lifetime = 60 + batteryTimes * 30"
 
     @validator('hitRate')
-    def validate_hitRate(cls, v, values, **kwargs):
-        assert v >= values['score'] / 200 * 200 * 0.5, \
+    def validate_hitRate(cls, v, values):
+        assert v >= values['score'] / 200 * 1 * 0.5, \
             f"hitRate should be linear to score"
 
     """
     验证的字段必须出现在需要的字段之后
     """
+
     @validator('isRealScore')
-    def validate_isRealScore(cls, v, values, **kwargs):
+    def validate_isRealScore(cls, v: FeatIsRealScore, values):
         if values['isUpload'] == 0:
-            assert v == -1, \
-                f"when isUpload = 0, then isRealScore = -1"
+            assert v == FeatIsRealScore.NO_DATA, \
+                f"when isUpload = 0, then isRealScore = FeatIsRealScore.NO_DATA, instead of {v}"
 
     @validator('impulseTimes')
-    def validate_impulseTimes(cls, v, values, **kwargs):
+    def validate_impulseTimes(cls, v, values):
         assert v <= (
             values['batteryTimes'] +
             values['filterLenTimes'] +
@@ -115,10 +135,10 @@ if __name__ == '__main__':
     feat = FeatModel(
         storyTime=0.,
         tutorialTime=0.,
-        duration=0,
+        duration=False,
         score=0.,
-        difficultyLevel=0,
-        replayTimes=0,
+        difficultyLevel=FeatDifficultyLevel.EASY,
+        replayTimes=False,
         hitRate=0.,
         badRate=0.,
         mismatchRate=0.,
@@ -129,16 +149,16 @@ if __name__ == '__main__':
         clickRate=0.,
         npcHitRate=0.,
         getbackRate=0.,
-        isAcceptGift=0,
-        giftType=0,
-        isUpload=0,
-        isRealScore=-1,
-        bugTimes=0,
-        batteryTimes=0,
+        isAcceptGift=False,
+        giftType=FeatGiftType.NONE,
+        isUpload=False,
+        isRealScore=FeatIsRealScore.NO_DATA,
+        bugTimes=False,
+        batteryTimes=1,
         filterLenTimes=0,
         signalTimes=0,
         impulseTimes=0,
-        morePolicy=0,
-        lifetime='s',
+        morePolicy=False,
+        lifetime=0,
     )
-    print('feat', feat)
+    logger.info(f'feat: {feat}')
