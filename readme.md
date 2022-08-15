@@ -45,6 +45,11 @@ feature distribution:
 - [x] 4.storyTime小于1的太多了 好多是0.00xxx的 500个里面小于1的最好不要超过10个
 - [x] 8.batteryTimes大于8次的太多了，能不能把比例控制在10%以内
 - [x] 9.signalTimes，filterLenTimes的值域是0-5.(这个是我的失误，我当时搞错了)
+> 通过使用更低级的api `_gen_float` 应该完成了：
+- [x] mismatchRate 应该保证80%的数据结果都在20%以下
+- [x] badRate值域改成0-70%吧
+- [x] getbackRate 应该保证80%的数据结果都在50%以下
+- [x] hitRate应该保证80%的数据结果都在50%以上
 
 output formats:
 - [x] 3.clickRate是整型，不带小数
