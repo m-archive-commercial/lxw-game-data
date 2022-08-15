@@ -39,10 +39,10 @@ feature distribution:
 output formats:
 - [x] 3.clickRate是整型，不带小数
 - [x] 【声明数据类型时用int，不用bool就可以以TRUE/FALSE赋值，但以1/0表示与输出了】11.布尔类型的，能不能有一份0,1的表达，就是0代表false，1代表true。（两种格式可以都输出，数字比较好跑东西，文字人看容易一些）
-- [ ] 7.百分比相关的保留4位小数就可以了。
-- [ ] storyTime 保留1位小数就行了。
-- [ ] 5.tutorialTime保留1位小数就行了。
-- [ ] 6.score保留1位小数就行了。
+- [x] 7.百分比相关的保留4位小数就可以了。
+- [x] storyTime 保留1位小数就行了。
+- [x] 5.tutorialTime保留1位小数就行了。
+- [x] 6.score保留1位小数就行了。
 
 
 - [ ] statistics

@@ -11,9 +11,11 @@ from utils.config_path import LOGS_DIR
 
 
 FORMATTER = logging.Formatter(
+    # cons: too annoying when log like: `[regenerate_field.py:regenerate_field:regenerate:16]`
     # ref: https://stackoverflow.com/a/44401529/9422455
-    '%(asctime)s, %(levelname)-8s [%(filename)s:%(module)s:%(funcName)s:%(lineno)d] %(message)s'
-    # "%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] <%(name)s> %(message)s"
+    # '%(asctime)s, %(levelname)-8s [%(filename)s:%(module)s:%(funcName)s:%(lineno)d] %(message)s'
+
+    "%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] <%(name)s> %(message)s"
 )
 
 

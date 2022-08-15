@@ -99,6 +99,7 @@ class FeatGenerator:
         fScore, intClickFreq, isDuration, intBatteryTimes --> intLifetime
         intBatteryTimes, intFilterLenTimes, intSignalTimes --> intImpulseTimes
         """
+        logger.debug('generating pre-feats')
         assert have_tried < self.nMaxGenRetries, f"gen featModel failed for {self.nMaxGenRetries} tries"
 
         score = self._gen_floats((0, 5, 40, 100, 200))[0]
@@ -129,7 +130,8 @@ class FeatGenerator:
                 "isDuration"     : duration,
                 "intBatteryTimes": batteryTimes
             })
-        except:
+        except Exception as e:
+            logger.debug(e.args)
             return self._preGenFeatModel(have_tried + 1)
         else:
             return {
@@ -147,27 +149,30 @@ class FeatGenerator:
             }
 
     def genFeatModel(self) -> FeatModel:
-
+        logger.debug('generating feats')
         predata = self._preGenFeatModel()
 
         data = dict(
             **predata,
-            storyTime=self._gen_floats((0, 5, 10, 30, FEAT_STORYTIME_MAX))[0],
-            tutorialTime=self._gen_floats((0, 5, 18, 40, 100))[0],
-            difficultyLevel=self._gen_choices(FeatDifficultyLevel)[0],
-            replayTimes=self._gen_bools()[0],
-            badRate=self._gen_percents()[0],
-            mismatchRate=self._gen_percents()[0],
-            keepaway=self._gen_floats((0, 5, 60, 100, 200))[0],
-            feedback=self._gen_percents()[0],
-            goodRate=self._gen_percents()[0],
-            moveNum=self._gen_floats((0, 5, 40, 100, 200))[0],
-            npcHitRate=self._gen_percents()[0],
-            getbackRate=self._gen_percents()[0],
+            fStoryTime=self._gen_floats((0, 5, 10, 30, FEAT_STORYTIME_MAX))[0],
+            fTutorialTime=self._gen_floats((0, 5, 18, 40, 100))[0],
+            fKeepaway=self._gen_floats((0, 5, 60, 100, 200))[0],
+            fMoveNum=self._gen_floats((0, 5, 40, 100, 200))[0],
+
+            enumDifficultyLevel=self._gen_choices(FeatDifficultyLevel)[0],
+            enumGiftType=self._gen_choices(FeatGiftType)[0],
+
+            isReplayed=self._gen_bools()[0],
             isAcceptGift=self._gen_bools()[0],
-            giftType=self._gen_choices(FeatGiftType)[0],
-            bugTimes=self._gen_bools()[0],
-            morePolicy=self._gen_bools()[0],
+            isBug=self._gen_bools()[0],
+            isMorePolicy=self._gen_bools()[0],
+
+            pctBadRate=self._gen_percents()[0],
+            pctMismatchRate=self._gen_percents()[0],
+            pctFeedback=self._gen_percents()[0],
+            pctGoodRate=self._gen_percents()[0],
+            pctNpcHitRate=self._gen_percents()[0],
+            pctGetbackRate=self._gen_percents()[0],
         )
         feat_model = FeatModel(**data)
         self._feat_models.append(feat_model)
@@ -182,7 +187,8 @@ class FeatGenerator:
                 try:
                     total_tries += 1
                     self.genFeatModel()
-                except:
+                except Exception as e:
+                    logger.debug(e.args)
                     failed_tries += 1
                 else:
                     break
@@ -201,10 +207,18 @@ class FeatGenerator:
     def dump(self, fn=None):
         df = pd.DataFrame([dict(i) for i in self._feat_models])
 
-        df_pcts = df.loc[[i.startswith('pct') for i in df.columns]]
-        df_pcts = df_pcts.apply(lambda v: f"{round(v * 100, 2)}%")
+        # ref: [python - applying a method to a few selected columns in a pandas dataframe - Stack Overflow](https://stackoverflow.com/questions/51306491/applying-a-method-to-a-few-selected-columns-in-a-pandas-dataframe)
+        cols_pct = [i for i in list(df.columns) if i.startswith('pct')]
+        df[cols_pct] = df[cols_pct].applymap(lambda v: f"{v * 100:05.02f}%")
+
         fp = OUTPUT_DIR / (fn or 'feat_models.csv')
-        df.to_csv(fp.__str__(), encoding='utf_8', )
+
+        # failed
+        # [pandas format float decimal places Code Example](https://www.codegrepper.com/code-examples/python/pandas+format+float+decimal+places)
+        # pd.set_option('precision', 1)
+
+        # ref: [python - float64 with pandas to_csv - Stack Overflow](https://stackoverflow.com/questions/12877189/float64-with-pandas-to-csv)
+        df.to_csv(fp.__str__(), encoding='utf_8', float_format='%.1f')
         logger.info(f'dumped to file://{fp}')
 
 
