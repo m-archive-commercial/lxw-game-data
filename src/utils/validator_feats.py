@@ -7,8 +7,8 @@ from ds import FeatRealScore
 
 
 def validateHitRate(v, values):
-    assert v >= values['score'] / 200 * 1 * 0.5, \
-        f"hitRate should be linear to score"
+    assert v >= values['fScore'] / 200 * 1 * 0.5, \
+        f"hitRate should be linear to fScore"
 
 
 def validateRealScore(v, values):
@@ -19,26 +19,26 @@ def validateRealScore(v, values):
 
 def validateImpulseTimes(v, values):
     assert v <= (
-        values['batteryTimes'] +
-        values['filterLenTimes'] +
-        values['signalTimes']
+        values['intBatteryTimes'] +
+        values['intFilterLenTimes'] +
+        values['intSignalTimes']
     ) >> 1, \
         f"impulseTimes({v}) <= 1/2 * (" \
-        f"batteryTimes({values['batteryTimes']}) " \
-        f"+ filterLenTimes({values['filterLenTimes']}) " \
-        f"+ signalTimes({values['signalTimes']})" \
+        f"intBatteryTimes({values['intBatteryTimes']}) " \
+        f"+ intFilterLenTimes({values['intFilterLenTimes']}) " \
+        f"+ intSignalTimes({values['intSignalTimes']})" \
         f")"
 
 
 def validateLifetime(v, values, linear_ratio=0.3):
-    assert v >= values['score'] / 200 * 660 * linear_ratio, \
-        f"lifetime({v}) should be linear to score({values['score']})"
+    assert v >= values['fScore'] / 200 * 660 * linear_ratio, \
+        f"lifetime({v}) should be linear to fScore({values['fScore']})"
 
-    assert v >= values['clickRate'] / 3000 * 660 * linear_ratio, \
-        f"lifetime({v}) should be linear to clickRate({values['clickRate']})"
+    assert v >= values['intClickFreq'] / 3000 * 660 * linear_ratio, \
+        f"lifetime({v}) should be linear to intClickFreq({values['intClickFreq']})"
 
-    if values['duration'] == 1:
+    if values['isDuration'] == 1:
         assert v >= 60 and v % 30 == 0, \
-            f"when duration = 1, should lifetime({v}) >= 60, and lifetime({v}) % 30 = 0"
-        assert v == 60 + values['batteryTimes'] * 30, \
-            f"when duration = 1, should lifetime({v}) = 60 + batteryTimes({values['batteryTimes']}) * 30"
+            f"when isDuration = 1, should lifetime({v}) >= 60, and lifetime({v}) % 30 = 0"
+        assert v == 60 + values['intBatteryTimes'] * 30, \
+            f"when isDuration = 1, should lifetime({v}) = 60 + intBatteryTimes({values['intBatteryTimes']}) * 30"

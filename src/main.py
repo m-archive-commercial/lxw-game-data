@@ -5,6 +5,7 @@ create: Aug 15, 2022, 16:09
 """
 import argparse
 
+from config.model import DEFAULT_NUM_MODELS_TO_GEN
 from feat_generator import FeatGenerator
 from solver.baseSolver import BaseSolver
 from solver.polynomialSolver import PolynomialSolver
@@ -12,11 +13,11 @@ from solver.polynomialSolver import PolynomialSolver
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-n', '--nTargetModelsValid', default=10, type=int,
+        '-n', '--nModelsToGen', default=DEFAULT_NUM_MODELS_TO_GEN, type=int,
         help='number of target models to be generated, e.g. 500'
     )
     parser.add_argument(
-        '--nMaxGenerateRetries', default=10,
+        '--nMaxGenRetries', default=10,
         help='number of retrying to generate models in each epoch, recommending 5-10'
     )
     parser.add_argument(
@@ -28,8 +29,8 @@ if __name__ == '__main__':
     gSolver: BaseSolver = PolynomialSolver()
     gFeatGenerator = FeatGenerator(
         gSolver,
-        nTargetModelsValid=args.nTargetModelsValid,
-        nMaxGenerateRetries=args.nMaxGenerateRetries
+        nModelsToGen=args.nTargetModelsValid,
+        nMaxGenRetries=args.nMaxGenerateRetries
     ).genFeatModels()
     if args.dump:
         gFeatGenerator.dump()

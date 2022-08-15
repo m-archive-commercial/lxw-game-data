@@ -35,7 +35,7 @@ class PolynomialSolver(BaseSolver):
 if __name__ == '__main__':
     gSolver = PolynomialSolver()
 
-    # test storyTime (ensure sample of < 1 small)
+    # test fStoryTime (ensure sample of < 1 small)
     gSolver.initY([0.5, 5, 10, 30, 100]).fit()
     gSolver.plotSolver()
     gSolver.plotSample()

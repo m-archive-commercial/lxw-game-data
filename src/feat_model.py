@@ -21,66 +21,66 @@ class FeatModel(BaseModel):
     """
     验证的字段必须出现在需要的字段之后
 
-        score --> hitRate
-        score, clickRate, duration, batteryTimes --> lifetime
-        batteryTimes, filterLenTimes, signalTimes --> impulseTimes
-        isUpload --> realScore
+        fScore --> pctHitRate
+        fScore, intClickFreq, isDuration, intBatteryTimes --> intLifetime
+        intBatteryTimes, intFilterLenTimes, intSignalTimes --> intImpulseTimes
+        isUpload --> enumRealScore
 
     todo:
         1. add help/description on each field
         2. add stat constraint
     """
 
-    score: strict_float(le=FEAT_SCORE_MAX)  # (5, 40, 100)
+    fScore: strict_float(le=FEAT_SCORE_MAX)  # (5, 40, 100)
 
-    hitRate: strict_percent()
+    pctHitRate: strict_percent()
 
-    clickRate: strict_int(le=FEAT_CLICKRATE_MAX)  # (100, 830, 2000)
-    duration: int  # bool # 0. 中途退出，1. 坚持最后
-    batteryTimes: strict_int(le=FEAT_BATTERYTIME_MAX)  # (0, 2, 5)
+    intClickFreq: strict_int(le=FEAT_CLICKRATE_MAX)  # (100, 830, 2000)
+    isDuration: int  # bool # 0. 中途退出，1. 坚持最后
+    intBatteryTimes: strict_int(le=FEAT_BATTERYTIME_MAX)  # (0, 2, 5)
 
-    lifetime: strict_int(le=FEAT_LIFETIME_MAX)  # max: 660
+    intLifetime: strict_int(le=FEAT_LIFETIME_MAX)  # max: 660
 
-    filterLenTimes: strict_int(le=FEAT_FILTERLENTIMES)  # (0,2,5)
-    signalTimes: strict_int(le=FEAT_SIGNALTIMES_MAX)  # (0,2,5)
-    impulseTimes: strict_int(le=FEAT_IMPULSETIMES_MAX)  # (0, 2,5)
+    intFilterLenTimes: strict_int(le=FEAT_FILTERLENTIMES)  # (0,2,5)
+    intSignalTimes: strict_int(le=FEAT_SIGNALTIMES_MAX)  # (0,2,5)
+    intImpulseTimes: strict_int(le=FEAT_IMPULSETIMES_MAX)  # (0, 2,5)
 
     isUpload: int  # bool
-    realScore: FeatRealScore
+    enumRealScore: FeatRealScore
 
-    storyTime: strict_float(le=FEAT_STORYTIME_MAX)  # (5, 10, 30)
-    tutorialTime: strict_float(le=FEAT_TUTORIALTIME_MAX)  # (5, 18, 40)
-    difficultyLevel: FeatDifficultyLevel
-    replayTimes: int  # bool # 0. 不重玩 1. 重玩
-    badRate: strict_percent()
-    mismatchRate: strict_percent()
-    keepaway: strict_float(le=FEAT_KEEPAWAY_MAX)  # (5, 60, 100)
-    feedback: strict_percent()
-    goodRate: strict_percent()
-    moveNum: strict_float(le=FEAT_MOVENUM_MAX)  # (5, 40, 100)
-    npcHitRate: strict_percent()
-    getbackRate: strict_percent()
+    fStoryTime: strict_float(le=FEAT_STORYTIME_MAX)  # (5, 10, 30)
+    fTutorialTime: strict_float(le=FEAT_TUTORIALTIME_MAX)  # (5, 18, 40)
+    enumDifficultyLevel: FeatDifficultyLevel
+    isReplayed: int  # bool # 0. 不重玩 1. 重玩
+    pctBadRate: strict_percent()
+    pctMismatchRate: strict_percent()
+    fKeepaway: strict_float(le=FEAT_KEEPAWAY_MAX)  # (5, 60, 100)
+    pctFeedback: strict_percent()
+    pctGoodRate: strict_percent()
+    fMoveNum: strict_float(le=FEAT_MOVENUM_MAX)  # (5, 40, 100)
+    pctNpcHitRate: strict_percent()
+    pctGetbackRate: strict_percent()
     isAcceptGift: int  # bool
-    giftType: FeatGiftType
-    bugTimes: int  # bool
-    morePolicy: int  # bool
+    enumGiftType: FeatGiftType
+    isBug: int  # bool
+    isMorePolicy: int  # bool
 
-    @validator('hitRate')
+    @validator('pctHitRate')
     def validate_hitRate(cls, v, values):
         validateHitRate(v, values)
         return v
 
-    @validator('realScore')
+    @validator('enumRealScore')
     def validate_realScore(cls, v, values):
         validateRealScore(v, values)
         return v
 
-    @validator('impulseTimes')
+    @validator('intImpulseTimes')
     def validate_impulseTimes(cls, v, values):
         validateImpulseTimes(v, values)
         return v
 
-    @validator('lifetime')
+    @validator('intLifetime')
     def validate_lifetime(cls, v, values):
         validateLifetime(v, values)
         return v
@@ -88,35 +88,36 @@ class FeatModel(BaseModel):
 
 if __name__ == '__main__':
     feat = FeatModel(
-        duration=False,
-        replayTimes=False,
+        isDuration=False,
+        isReplayed=False,
         isAcceptGift=False,
         isUpload=False,
-        bugTimes=False,
-        morePolicy=False,
+        isBug=False,
+        isMorePolicy=False,
 
-        difficultyLevel=FeatDifficultyLevel.EASY,
-        giftType=FeatGiftType.NONE,
-        realScore=FeatRealScore.NO_DATA,
+        enumDifficultyLevel=FeatDifficultyLevel.EASY,
+        enumGiftType=FeatGiftType.NONE,
+        enumRealScore=FeatRealScore.NO_DATA,
 
-        batteryTimes=1,
-        filterLenTimes=0,
-        signalTimes=0,
-        impulseTimes=0,
-        lifetime=0,
-        clickRate=0,
+        intBatteryTimes=1,
+        intFilterLenTimes=0,
+        intSignalTimes=0,
+        intImpulseTimes=0,
+        intLifetime=0,
+        intClickFreq=0,
 
-        storyTime=0.,
-        tutorialTime=0.,
-        score=0.,
-        hitRate=0.,
-        badRate=0.,
-        mismatchRate=0.,
-        keepaway=0.,
-        feedback=0.,
-        goodRate=0.,
-        moveNum=0.,
-        npcHitRate=0.,
-        getbackRate=0.,
+        fStoryTime=0.,
+        fTutorialTime=0.,
+        fScore=0.,
+        fKeepaway=0.,
+        fMoveNum=0.,
+
+        pctHitRate=0.,
+        pctBadRate=0.,
+        pctMismatchRate=0.,
+        pctFeedback=0.,
+        pctGoodRate=0.,
+        pctNpcHitRate=0.,
+        pctGetbackRate=0.,
     )
     logger.info(f'feat: {feat}')

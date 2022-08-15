@@ -12,9 +12,11 @@ import pandas as pd
 import tqdm
 
 from config.feats import FEAT_STORYTIME_MAX
+from config.model import DEFAULT_NUM_MODELS_TO_GEN
 from ds import ExtendedEnum, FeatDifficultyLevel, FeatGiftType, FeatRealScore
 from feat_model import FeatModel
 from solver.baseSolver import BaseSolver
+from solver.polynomialSolver import PolynomialSolver
 from utils.config_path import OUTPUT_DIR
 from utils.log import get_logger
 from utils.regenerate_field import regenerate
@@ -28,26 +30,26 @@ class FeatGenerator:
     def __init__(
         self,
         solver: BaseSolver,
-        nTargetModelsValid=500,
-        nTargetModelsEpoch=1,
-        nMaxGenerateRetries=10
+        nModelsToGen=DEFAULT_NUM_MODELS_TO_GEN,
+        nModelsEpoch=1,
+        nMaxGenRetries=10
     ):
         """
 
-        :param nTargetModelsEpoch:
-        :param nMaxGenerateRetries: tested: when 5, then failed [88/500]
+        :param nModelsEpoch:
+        :param nMaxGenRetries: tested: when 5, then failed [88/500]
         """
         self._solver = solver
-        self.nTargetModelsValid = nTargetModelsValid
-        self.nTargetModelsEpoch = nTargetModelsEpoch
-        self.nMaxGenerateRetries = nMaxGenerateRetries
+        self.nModelsToGen = nModelsToGen
+        self.nModelsEpoch = nModelsEpoch
+        self.nMaxGenRetries = nMaxGenRetries
 
         self._feat_models: List[FeatModel] = []
 
     def _gen_floats(self, ys, xs=None):
         if xs:
             self._solver.initX(xs)
-        return self._solver.initY(ys).fit().generate(self.nTargetModelsEpoch)
+        return self._solver.initY(ys).fit().generate(self.nModelsEpoch)
 
     def _gen_ints(self, ys, xs=None):
         """
@@ -65,14 +67,14 @@ class FeatGenerator:
         return self._gen_floats(self._solver.xdata, xs)
 
     def _gen_bools(self):
-        return np.random.random(self.nTargetModelsEpoch) > 0.5
+        return np.random.random(self.nModelsEpoch) > 0.5
 
     def _gen_choices(self, choices: Type[ExtendedEnum]):
         """
         :param choices: Type[Enum] need
         :return:
         """
-        return np.random.choice(choices, self.nTargetModelsEpoch)
+        return np.random.choice(choices, self.nModelsEpoch)
 
     def _genFeatOfLifetime(self, batteryTimes):
         """
@@ -91,13 +93,13 @@ class FeatGenerator:
             return FeatRealScore.NO_DATA
         return self._gen_choices(FeatRealScore)[0]
 
-    def preGenFeatModel(self, have_tried=0):
+    def _preGenFeatModel(self, have_tried=0):
         """
-        score --> hitRate
-        score, clickRate, duration, batteryTimes --> lifetime
-        batteryTimes, filterLenTimes, signalTimes --> impulseTimes
+        fScore --> pctHitRate
+        fScore, intClickFreq, isDuration, intBatteryTimes --> intLifetime
+        intBatteryTimes, intFilterLenTimes, intSignalTimes --> intImpulseTimes
         """
-        assert have_tried < self.nMaxGenerateRetries, f"gen featModel failed for {self.nMaxGenerateRetries} tries"
+        assert have_tried < self.nMaxGenRetries, f"gen featModel failed for {self.nMaxGenRetries} tries"
 
         score = self._gen_floats((0, 5, 40, 100, 200))[0]
         hitRate = self._gen_percents()[0]
@@ -115,38 +117,38 @@ class FeatGenerator:
         realScore = self._genFeatOfRealScore(isUpload)
 
         try:
-            validateHitRate(hitRate, {'score': score})
+            validateHitRate(hitRate, {'fScore': score})
             validateImpulseTimes(impulseTimes, {
-                "batteryTimes"  : batteryTimes,
-                "filterLenTimes": filterLenTimes,
-                "signalTimes"   : signalTimes
+                "intBatteryTimes"  : batteryTimes,
+                "intFilterLenTimes": filterLenTimes,
+                "intSignalTimes"   : signalTimes
             })
             validateLifetime(lifetime, {
-                "score"       : score,
-                "clickRate"   : clickRate,
-                "duration"    : duration,
-                "batteryTimes": batteryTimes
+                "fScore"         : score,
+                "intClickFreq"   : clickRate,
+                "isDuration"     : duration,
+                "intBatteryTimes": batteryTimes
             })
         except:
-            return self.preGenFeatModel(have_tried + 1)
+            return self._preGenFeatModel(have_tried + 1)
         else:
             return {
-                "score"         : score,
-                "hitRate"       : hitRate,
-                "batteryTimes"  : batteryTimes,
-                "filterLenTimes": filterLenTimes,
-                "signalTimes"   : signalTimes,
-                "impulseTimes"  : impulseTimes,
-                "clickRate"     : clickRate,
-                "duration"      : duration,
-                "lifetime"      : lifetime,
-                "isUpload"      : isUpload,
-                "realScore"     : realScore,
+                "fScore"           : score,
+                "pctHitRate"       : hitRate,
+                "intBatteryTimes"  : batteryTimes,
+                "intFilterLenTimes": filterLenTimes,
+                "intSignalTimes"   : signalTimes,
+                "intImpulseTimes"  : impulseTimes,
+                "intClickFreq"     : clickRate,
+                "isDuration"       : duration,
+                "intLifetime"      : lifetime,
+                "isUpload"         : isUpload,
+                "enumRealScore"    : realScore,
             }
 
     def genFeatModel(self) -> FeatModel:
 
-        predata = self.preGenFeatModel()
+        predata = self._preGenFeatModel()
 
         data = dict(
             **predata,
@@ -175,7 +177,7 @@ class FeatGenerator:
     def genFeatModels(self) -> FeatGenerator:
         total_tries = 0
         failed_tries = 0
-        for _ in tqdm.tqdm(range(self.nTargetModelsValid)):
+        for _ in tqdm.tqdm(range(self.nModelsToGen)):
             while True:
                 try:
                     total_tries += 1
@@ -186,8 +188,8 @@ class FeatGenerator:
                     break
         logger.info({
             "config": {
-                "target models": self.nTargetModelsValid,
-                "max retries"  : self.nMaxGenerateRetries,
+                "target models": self.nModelsToGen,
+                "max retries"  : self.nMaxGenRetries,
             },
             "tries" : {
                 "failed": failed_tries,
@@ -196,8 +198,17 @@ class FeatGenerator:
         })
         return self
 
-    def dump(self):
+    def dump(self, fn=None):
         df = pd.DataFrame([dict(i) for i in self._feat_models])
-        fp = OUTPUT_DIR / 'feat_models.csv'
+
+        df_pcts = df.loc[[i.startswith('pct') for i in df.columns]]
+        df_pcts = df_pcts.apply(lambda v: f"{round(v * 100, 2)}%")
+        fp = OUTPUT_DIR / (fn or 'feat_models.csv')
         df.to_csv(fp.__str__(), encoding='utf_8', )
         logger.info(f'dumped to file://{fp}')
+
+
+if __name__ == '__main__':
+    fg = FeatGenerator(solver=PolynomialSolver())
+    fg.genFeatModels()
+    fg.dump(fn='test.csv')
