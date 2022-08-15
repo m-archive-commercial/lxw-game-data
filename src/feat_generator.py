@@ -168,12 +168,27 @@ class FeatGenerator:
             isBug=self._gen_bools()[0],
             isMorePolicy=self._gen_bools()[0],
 
-            pctBadRate=self._gen_percents()[0],
-            pctMismatchRate=self._gen_percents()[0],
+            pctBadRate=self._gen_floats(
+                # badRate值域改成0-70%吧
+                [0, .1, .3, .5, .7],
+            )[0],
+            pctMismatchRate=self._gen_floats(
+                # mismatchRate 应该保证80%的数据结果都在20%以下
+                [0, .05, .1, .2, 1],
+                [0, .1, .5, .8, 1]
+            )[0],
             pctFeedback=self._gen_percents()[0],
             pctGoodRate=self._gen_percents()[0],
-            pctNpcHitRate=self._gen_percents()[0],
-            pctGetbackRate=self._gen_percents()[0],
+            pctNpcHitRate=self._gen_floats(
+                # hitRate应该保证80%的数据结果都在50%以上
+                [0, .3, .5, .7, 1],
+                [0, .1, .2, .8, 1]
+            )[0],
+            pctGetbackRate=self._gen_floats(
+                # getbackRate 应该保证80%的数据结果都在50%以下
+                [0, .1, .3, .5, .1],
+                [0, .1, .5, .8, 1]
+            )[0],
         )
         feat_model = FeatModel(**data)
         self._feat_models.append(feat_model)
