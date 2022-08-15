@@ -34,7 +34,7 @@ def get_file_handler(filename="track.log", level=logging.DEBUG):
 def get_logger(logger_name):
     _logger = logging.getLogger(logger_name)
     _logger.setLevel(logging.DEBUG)  # better to have too much log than not enough
-    _logger.addHandler(get_console_handler(logging.INFO))
+    _logger.addHandler(get_console_handler(os.getenv('LOG_LEVEL', logging.INFO)))
     _logger.addHandler(get_file_handler("out.log", logging.DEBUG))
     # with this pattern, it's rarely necessary to propagate the error up to parent
     _logger.propagate = False
