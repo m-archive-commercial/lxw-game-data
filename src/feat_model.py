@@ -36,7 +36,7 @@ class FeatModel(BaseModel):
     hitRate: strict_percent()
 
     clickRate: strict_int(le=FEAT_CLICKRATE_MAX)  # (100, 830, 2000)
-    duration: bool  # 0. 中途退出，1. 坚持最后
+    duration: int  # bool # 0. 中途退出，1. 坚持最后
     batteryTimes: strict_int(le=FEAT_BATTERYTIME_MAX)  # (0, 2, 5)
 
     lifetime: strict_int(le=FEAT_LIFETIME_MAX)  # max: 660
@@ -45,13 +45,13 @@ class FeatModel(BaseModel):
     signalTimes: strict_int(le=FEAT_SIGNALTIMES_MAX)  # (0,2,5)
     impulseTimes: strict_int(le=FEAT_IMPULSETIMES_MAX)  # (0, 2,5)
 
-    isUpload: bool
+    isUpload: int  # bool
     realScore: FeatRealScore
 
     storyTime: strict_float(le=FEAT_STORYTIME_MAX)  # (5, 10, 30)
     tutorialTime: strict_float(le=FEAT_TUTORIALTIME_MAX)  # (5, 18, 40)
     difficultyLevel: FeatDifficultyLevel
-    replayTimes: bool  # 0. 不重玩 1. 重玩
+    replayTimes: int  # bool # 0. 不重玩 1. 重玩
     badRate: strict_percent()
     mismatchRate: strict_percent()
     keepaway: strict_float(le=FEAT_KEEPAWAY_MAX)  # (5, 60, 100)
@@ -60,10 +60,10 @@ class FeatModel(BaseModel):
     moveNum: strict_float(le=FEAT_MOVENUM_MAX)  # (5, 40, 100)
     npcHitRate: strict_percent()
     getbackRate: strict_percent()
-    isAcceptGift: bool
+    isAcceptGift: int  # bool
     giftType: FeatGiftType
-    bugTimes: bool
-    morePolicy: bool
+    bugTimes: int  # bool
+    morePolicy: int  # bool
 
     @validator('hitRate')
     def validate_hitRate(cls, v, values):
@@ -88,12 +88,27 @@ class FeatModel(BaseModel):
 
 if __name__ == '__main__':
     feat = FeatModel(
+        duration=False,
+        replayTimes=False,
+        isAcceptGift=False,
+        isUpload=False,
+        bugTimes=False,
+        morePolicy=False,
+
+        difficultyLevel=FeatDifficultyLevel.EASY,
+        giftType=FeatGiftType.NONE,
+        realScore=FeatRealScore.NO_DATA,
+
+        batteryTimes=1,
+        filterLenTimes=0,
+        signalTimes=0,
+        impulseTimes=0,
+        lifetime=0,
+        clickRate=0,
+
         storyTime=0.,
         tutorialTime=0.,
-        duration=False,
         score=0.,
-        difficultyLevel=FeatDifficultyLevel.EASY,
-        replayTimes=False,
         hitRate=0.,
         badRate=0.,
         mismatchRate=0.,
@@ -101,19 +116,7 @@ if __name__ == '__main__':
         feedback=0.,
         goodRate=0.,
         moveNum=0.,
-        clickRate=0.,
         npcHitRate=0.,
         getbackRate=0.,
-        isAcceptGift=False,
-        giftType=FeatGiftType.NONE,
-        isUpload=False,
-        realScore=FeatRealScore.NO_DATA,
-        bugTimes=False,
-        batteryTimes=1,
-        filterLenTimes=0,
-        signalTimes=0,
-        impulseTimes=0,
-        morePolicy=False,
-        lifetime=0,
     )
     logger.info(f'feat: {feat}')

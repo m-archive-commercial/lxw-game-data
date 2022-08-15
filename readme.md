@@ -6,10 +6,10 @@
 cd src
 
 # check help
-python feat_generator.py -h
+python main.py -h
 
 # generate 500 valid sample and dump to csv
-python feat_generator.py -n 500 -d
+python main.py -n 500 -d
 ```
 
 ### running result
@@ -38,11 +38,11 @@ feature distribution:
 
 output formats:
 - [x] 3.clickRate是整型，不带小数
+- [x] 【声明数据类型时用int，不用bool就可以以TRUE/FALSE赋值，但以1/0表示与输出了】11.布尔类型的，能不能有一份0,1的表达，就是0代表false，1代表true。（两种格式可以都输出，数字比较好跑东西，文字人看容易一些）
+- [ ] 7.百分比相关的保留4位小数就可以了。
 - [ ] storyTime 保留1位小数就行了。
 - [ ] 5.tutorialTime保留1位小数就行了。
 - [ ] 6.score保留1位小数就行了。
-- [ ] 7.百分比相关的保留4位小数就可以了。
-- [ ] 11.布尔类型的，能不能有一份0,1的表达，就是0代表false，1代表true。（两种格式可以都输出，数字比较好跑东西，文字人看容易一些）
 
 
 - [ ] statistics

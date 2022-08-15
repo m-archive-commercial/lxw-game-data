@@ -5,7 +5,6 @@ create: Aug 14, 2022, 00:36
 """
 from __future__ import annotations
 
-import argparse
 from typing import List, Type
 
 import numpy as np
@@ -16,7 +15,6 @@ from config.feats import FEAT_STORYTIME_MAX
 from ds import ExtendedEnum, FeatDifficultyLevel, FeatGiftType, FeatRealScore
 from feat_model import FeatModel
 from solver.baseSolver import BaseSolver
-from solver.polynomialSolver import PolynomialSolver
 from utils.config_path import OUTPUT_DIR
 from utils.log import get_logger
 from utils.regenerate_field import regenerate
@@ -203,29 +201,3 @@ class FeatGenerator:
         fp = OUTPUT_DIR / 'feat_models.csv'
         df.to_csv(fp.__str__(), encoding='utf_8', )
         logger.info(f'dumped to file://{fp}')
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-n', '--nTargetModelsValid', default=10, type=int,
-        help='number of target models to be generated, e.g. 500'
-    )
-    parser.add_argument(
-        '-d', '--dump', action='store_true',
-        help='dump the feature models to file'
-    )
-    parser.add_argument(
-        '--nMaxGenerateRetries', default=10,
-        help='number of retrying to generate models in each epoch, recommending 5-10'
-    )
-    args = parser.parse_args()
-
-    gSolver: BaseSolver = PolynomialSolver()
-    gFeatGenerator = FeatGenerator(
-        gSolver,
-        nTargetModelsValid=args.nTargetModelsValid,
-        nMaxGenerateRetries=args.nMaxGenerateRetries
-    ).genFeatModels()
-    if args.dump:
-        gFeatGenerator.dump()
