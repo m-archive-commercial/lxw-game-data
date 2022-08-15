@@ -20,13 +20,6 @@ FloatArrayLike = Union[np.array, List[float]]
 def to_fit(x, a1, a2, a3, a4, a5):
     """
     tks: 旭神
-    :param x:
-    :param a1:
-    :param a2:
-    :param a3:
-    :param a4:
-    :param a5:
-    :return:
     """
 
     def S(x, k=3):

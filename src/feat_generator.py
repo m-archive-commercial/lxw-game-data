@@ -33,7 +33,8 @@ class FeatGenerator:
         solver: BaseSolver,
         nModelsToGen=DEFAULT_NUM_MODELS_TO_GEN,
         nModelsEpoch=1,
-        nMaxGenRetries=10
+        nMaxGenRetries=10,
+        perturbation=0.3,
     ):
         """
 
@@ -41,16 +42,26 @@ class FeatGenerator:
         :param nMaxGenRetries: tested: when 5, then failed [88/500]
         """
         self._solver = solver
-        self.nModelsToGen = nModelsToGen
-        self.nModelsEpoch = nModelsEpoch
-        self.nMaxGenRetries = nMaxGenRetries
+        self._nModelsToGen = nModelsToGen
+        self._nModelsEpoch = nModelsEpoch
+        self._nMaxGenRetries = nMaxGenRetries
+        self._perturbation = perturbation
 
         self._feat_models: List[FeatModel] = []
 
+    @property
+    def xdata(self):
+        """
+        todo: test
+        :return:
+        """
+        d = (1 - self._perturbation) / 2
+        return [0, .5 - d, .5, .5 + d, 1]
+
     def _gen_floats(self, ys, xs=None):
         if xs:
-            self._solver.initX(xs)
-        return self._solver.initY(ys).fit().generate(self.nModelsEpoch)
+            self._solver.setXdata(xs)
+        return self._solver.setYdata(ys).fit().generate(self._nModelsEpoch)
 
     def _gen_ints(self, ys, xs=None):
         """
@@ -68,14 +79,14 @@ class FeatGenerator:
         return self._gen_floats(self._solver.xdata, xs)
 
     def _gen_bools(self):
-        return np.random.random(self.nModelsEpoch) > 0.5
+        return np.random.random(self._nModelsEpoch) > 0.5
 
     def _gen_choices(self, choices: Type[ExtendedEnum]):
         """
         :param choices: Type[Enum] need
         :return:
         """
-        return np.random.choice(choices, self.nModelsEpoch)
+        return np.random.choice(choices, self._nModelsEpoch)
 
     def _genFeatOfLifetime(self, batteryTimes):
         """
@@ -101,7 +112,7 @@ class FeatGenerator:
         intBatteryTimes, intFilterLenTimes, intSignalTimes --> intImpulseTimes
         """
         logger.debug('generating pre-feats')
-        assert have_tried < self.nMaxGenRetries, f"gen featModel failed for {self.nMaxGenRetries} tries"
+        assert have_tried < self._nMaxGenRetries, f"gen featModel failed for {self._nMaxGenRetries} tries"
 
         score = self._gen_floats((0, 5, 40, 100, 200))[0]
         hitRate = self._gen_percents()[0]
@@ -198,7 +209,7 @@ class FeatGenerator:
     def genFeatModels(self) -> FeatGenerator:
         total_tries = 0
         failed_tries = 0
-        for _ in tqdm.tqdm(range(self.nModelsToGen)):
+        for _ in tqdm.tqdm(range(self._nModelsToGen)):
             while True:
                 try:
                     total_tries += 1
@@ -210,8 +221,8 @@ class FeatGenerator:
                     break
         logger.info({
             "config": {
-                "target models": self.nModelsToGen,
-                "max retries"  : self.nMaxGenRetries,
+                "target models": self._nModelsToGen,
+                "max retries"  : self._nMaxGenRetries,
             },
             "tries" : {
                 "failed": failed_tries,

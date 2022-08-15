@@ -13,11 +13,11 @@ from solver.polynomialSolver import PolynomialSolver
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-n', '--nModelsToGen', default=DEFAULT_NUM_MODELS_TO_GEN, type=int,
+        '-n', '--_nModelsToGen', default=DEFAULT_NUM_MODELS_TO_GEN, type=int,
         help='number of target models to be generated, e.g. 500'
     )
     parser.add_argument(
-        '--nMaxGenRetries', default=10,
+        '--_nMaxGenRetries', default=10,
         help='number of retrying to generate models in each epoch, recommending 5-10'
     )
     parser.add_argument(

@@ -27,15 +27,15 @@ class PolynomialSolver(BaseSolver):
         if not bounds:
             bounds = [0, np.inf]  # positive
         opts, covariance = curve_fit(func, xdata=self._xdata, ydata=self._ydata, sigma=sigma, bounds=bounds)
-        # logger.debug(f'opts: {opts}')
-        self._solver = lambda x: func(x, *opts)
+        logger.debug(f'opts: {opts}')
+        self._x2y = lambda x: func(x, *opts)
         return self
 
 
 if __name__ == '__main__':
     gSolver = PolynomialSolver()
-
-    # test fStoryTime (ensure sample of < 1 small)
-    gSolver.initY([0.5, 5, 10, 30, 100]).fit()
-    gSolver.plotSolver()
-    gSolver.plotSample()
+    gSolver \
+        .setMainSpace(0.5) \
+        .setYdata([0, 1, 2, 5, 100]) \
+        .fit() \
+        .plotBoth(nFit=500, nGen=500, toPeak=.9)

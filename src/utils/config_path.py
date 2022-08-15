@@ -4,6 +4,7 @@ author: https://github.com/MarkShawn2020
 create: Aug 15, 2022, 03:11
 """
 import os
+import sys
 import pathlib
 from os.path import abspath
 
@@ -25,8 +26,8 @@ CONFIG_COLUMNS_MAP_PATH = SRC_CONFIG_PATH / "columns_map.json"
 # /
 PROJECT_DIR = SRC_DIR.parent
 
-# /data/
-DATA_DIR = PROJECT_DIR / 'data'
+# /x/
+DATA_DIR = PROJECT_DIR / 'x'
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # /output/
