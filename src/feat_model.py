@@ -35,7 +35,7 @@ class FeatModel(BaseModel):
 
     hitRate: strict_percent()
 
-    clickRate: strict_float(le=FEAT_CLICKRATE_MAX)  # (100, 830, 2000)
+    clickRate: strict_int(le=FEAT_CLICKRATE_MAX)  # (100, 830, 2000)
     duration: bool  # 0. 中途退出，1. 坚持最后
     batteryTimes: strict_int(le=FEAT_BATTERYTIME_MAX)  # (0, 2, 5)
 

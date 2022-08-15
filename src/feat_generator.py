@@ -36,7 +36,6 @@ class FeatGenerator:
     ):
         """
 
-        :param solver:
         :param nTargetModelsEpoch:
         :param nMaxGenerateRetries: tested: when 5, then failed [88/500]
         """
@@ -47,10 +46,8 @@ class FeatGenerator:
 
         self._feat_models: List[FeatModel] = []
 
-        logger.debug(f'solver: {self._solver}, target_models_cnt: {self.nTargetModelsEpoch}')
-
     def _gen_floats(self, ys):
-        return self._solver.fit(ys).generate(self.nTargetModelsEpoch)
+        return self._solver.initY(ys).fit().generate(self.nTargetModelsEpoch)
 
     def _gen_ints(self, ys):
         """
@@ -111,7 +108,7 @@ class FeatGenerator:
         signalTimes = self._gen_ints((0, 1, 2, 5, 20))[0]
         impulseTimes = self._gen_ints((0, 1, 2, 5, 20))[0]
 
-        clickRate = self._gen_floats((0, 100, 830, 2000, 3000))[0]
+        clickRate = self._gen_ints((0, 100, 830, 2000, 3000))[0]
         duration = self._gen_bools()[0]
         lifetime = self._genFeatOfLifetime(batteryTimes)
 
@@ -223,7 +220,7 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    gSolver: BaseSolver = PolynomialSolver(xdata=DEFAULT_XDATA)
+    gSolver: BaseSolver = PolynomialSolver()
     gFeatGenerator = FeatGenerator(
         gSolver,
         nTargetModelsValid=args.nTargetModelsValid,
