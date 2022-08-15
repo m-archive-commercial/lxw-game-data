@@ -15,15 +15,21 @@ python main.py -n 500 -d
 ### running result
 
 ```text
-(venv) 2022/08/15 04:02:16 (base) ➜  src git:(master) ✗ python feat_generator.py -n 500
-100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 500/500 [02:24<00:00,  3.45it/s]
-2022-08-15 04:17:25,630, INFO     [feat_generator.py:feat_generator:genFeatModels:191] {'config': {'target models': 500, 'max retries': 10}, 'tries': {'failed': 60, 'total': 560}}
-2022-08-15 04:17:25,649, INFO     [feat_generator.py:feat_generator:dump:207] dumped to file:///Users/mark/PycharmProjects/lxw-game-data/output/feat_models.csv
+(venv) 2022/08/15 17:30:08 (base) ➜  src git:(main) ✗ python main.py -n 500 -d
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 500/500 [05:46<00:00,  1.44it/s]
+2022-08-15 17:36:21,690 INFO     [feat_generator.py:196] <FeatGenerator> {'config': {'target models': 500, 'max retries': 10}, 'tries': {'failed': 652, 'total': 1152}}
+2022-08-15 17:36:21,713 INFO     [feat_generator.py:229] <FeatGenerator> dumped to file:///Users/mark/PycharmProjects/lxw-game-data/output/feat_models.csv
+
 ```
 
 ## Track
 
 ### 2022/08/15
+
+- [ ] statistics
+- [ ] visualization
+
+#### validation
 
 data relative:
 - [ ] 1.输出的格式应该和原数据集保持一致，就是性别年龄什么的都带上。特别是五个人格得分应该每一行都有。
@@ -34,6 +40,7 @@ table relative:
 
 feature distribution:
 > 以下两点，应该已解决，通过调整xdata [0, .25, 0.5, .75, .97] --> [0, .1, .5, .9, .97]
+> 
 > 从分布上看，0.几的小数比较多是难免的，因为拟合结果很指数，所以目前采用了0-->0.8的边界设定
 - [x] 4.storyTime小于1的太多了 好多是0.00xxx的 500个里面小于1的最好不要超过10个
 - [x] 8.batteryTimes大于8次的太多了，能不能把比例控制在10%以内
@@ -47,10 +54,6 @@ output formats:
 - [x] storyTime 保留1位小数就行了。
 - [x] 5.tutorialTime保留1位小数就行了。
 - [x] 6.score保留1位小数就行了。
-
-
-- [ ] statistics
-- [ ] visualization
 
 ### 2022/08/14
 

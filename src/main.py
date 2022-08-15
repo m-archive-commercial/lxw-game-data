@@ -29,8 +29,8 @@ if __name__ == '__main__':
     gSolver: BaseSolver = PolynomialSolver()
     gFeatGenerator = FeatGenerator(
         gSolver,
-        nModelsToGen=args.nTargetModelsValid,
-        nMaxGenRetries=args.nMaxGenerateRetries
+        nModelsToGen=args.nModelsToGen,
+        nMaxGenRetries=args.nMaxGenRetries
     ).genFeatModels()
     if args.dump:
         gFeatGenerator.dump()
