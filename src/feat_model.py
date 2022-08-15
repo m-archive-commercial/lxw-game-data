@@ -8,7 +8,7 @@ from pydantic import BaseModel, validator
 
 from config.feats import FEAT_TUTORIALTIME_MAX, FEAT_STORYTIME_MAX, FEAT_MOVENUM_MAX, FEAT_KEEPAWAY_MAX, \
     FEAT_SCORE_MAX, FEAT_CLICKRATE_MAX, FEAT_IMPULSETIMES_MAX, FEAT_SIGNALTIMES_MAX, FEAT_FILTERLENTIMES, \
-    FEAT_BATTERYTIME_MAX, FEAT_LIFETIME_MAX, FEAT_STORYTIME_MIN
+    FEAT_BATTERYTIME_MAX, FEAT_LIFETIME_MAX
 from ds import FeatDifficultyLevel, FeatGiftType, FeatRealScore
 from utils.log import get_logger
 from utils.strict_feilds import strict_int, strict_float, strict_percent
@@ -48,7 +48,7 @@ class FeatModel(BaseModel):
     isUpload: bool
     realScore: FeatRealScore
 
-    storyTime: strict_float(le=FEAT_STORYTIME_MAX, ge=FEAT_STORYTIME_MIN)  # (5, 10, 30)
+    storyTime: strict_float(le=FEAT_STORYTIME_MAX)  # (5, 10, 30)
     tutorialTime: strict_float(le=FEAT_TUTORIALTIME_MAX)  # (5, 18, 40)
     difficultyLevel: FeatDifficultyLevel
     replayTimes: bool  # 0. 不重玩 1. 重玩

@@ -8,6 +8,7 @@ from abc import abstractmethod
 import matplotlib.pyplot as plt
 import numpy as np
 
+from config.model import DEFAULT_XDATA
 from utils.log import get_logger
 
 
@@ -31,7 +32,7 @@ class BaseSolver:
         self.initX()
 
     def initX(self, xdata=None):
-        self._xdata = xdata or [0, 0.25, 0.5, 0.75, 0.97]
+        self._xdata = xdata or DEFAULT_XDATA
         return self
 
     def initY(self, ydata):

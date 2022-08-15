@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-from config.feats import FEAT_STORYTIME_MIN, FEAT_STORYTIME_MAX
+from config.feats import FEAT_STORYTIME_MAX
 from ds import ExtendedEnum, FeatDifficultyLevel, FeatGiftType, FeatRealScore
 from feat_model import FeatModel
 from solver.baseSolver import BaseSolver
@@ -152,7 +152,7 @@ class FeatGenerator:
 
         data = dict(
             **predata,
-            storyTime=self._gen_floats((FEAT_STORYTIME_MIN, 5, 10, 30, FEAT_STORYTIME_MAX))[0],
+            storyTime=self._gen_floats((0, 5, 10, 30, FEAT_STORYTIME_MAX))[0],
             tutorialTime=self._gen_floats((0, 5, 18, 40, 100))[0],
             difficultyLevel=self._gen_choices(FeatDifficultyLevel)[0],
             replayTimes=self._gen_bools()[0],
