@@ -5,6 +5,7 @@ create: Aug 14, 2022, 00:36
 """
 from __future__ import annotations
 
+import json
 from typing import List, Type
 
 import numpy as np
@@ -17,7 +18,7 @@ from ds import ExtendedEnum, FeatDifficultyLevel, FeatGiftType, FeatRealScore
 from feat_model import FeatModel
 from solver.baseSolver import BaseSolver
 from solver.polynomialSolver import PolynomialSolver
-from utils.config_path import OUTPUT_DIR
+from utils.config_path import OUTPUT_DIR, CONFIG_COLUMNS_MAP_PATH
 from utils.log import get_logger
 from utils.regenerate_field import regenerate
 from utils.validator_feats import validateHitRate, validateImpulseTimes, validateLifetime
@@ -216,6 +217,12 @@ class FeatGenerator:
         # failed
         # [pandas format float decimal places Code Example](https://www.codegrepper.com/code-examples/python/pandas+format+float+decimal+places)
         # pd.set_option('precision', 1)
+
+        with open(CONFIG_COLUMNS_MAP_PATH, "r") as f:
+            cols = json.load(f)
+        df.rename(columns=cols, inplace=True)
+        # reorder cols, ref: https://stackoverflow.com/a/23741480/9422455
+        df = df[cols.values()]
 
         # ref: [python - float64 with pandas to_csv - Stack Overflow](https://stackoverflow.com/questions/12877189/float64-with-pandas-to-csv)
         df.to_csv(fp.__str__(), encoding='utf_8', float_format='%.1f')
