@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-from config.model import DEFAULT_XDATA
+from config.feats import FEAT_STORYTIME_MIN, FEAT_STORYTIME_MAX
 from ds import ExtendedEnum, FeatDifficultyLevel, FeatGiftType, FeatRealScore
 from feat_model import FeatModel
 from solver.baseSolver import BaseSolver
@@ -46,23 +46,25 @@ class FeatGenerator:
 
         self._feat_models: List[FeatModel] = []
 
-    def _gen_floats(self, ys):
+    def _gen_floats(self, ys, xs=None):
+        if xs:
+            self._solver.initX(xs)
         return self._solver.initY(ys).fit().generate(self.nTargetModelsEpoch)
 
-    def _gen_ints(self, ys):
+    def _gen_ints(self, ys, xs=None):
         """
         tip: here we can use .astype(int) since we didn't use the `StrictInt`
         :param ys:
         :return:
         """
-        return self._gen_floats(ys).astype(int)
+        return self._gen_floats(ys, xs).astype(int)
 
-    def _gen_percents(self):
+    def _gen_percents(self, xs=None):
         """
         percent can be generated linearly, which is the same args like `xdata`
         :return:
         """
-        return self._gen_floats(self._solver.xdata)
+        return self._gen_floats(self._solver.xdata, xs)
 
     def _gen_bools(self):
         return np.random.random(self.nTargetModelsEpoch) > 0.5
@@ -77,7 +79,6 @@ class FeatGenerator:
     def _genFeatOfLifetime(self, batteryTimes):
         """
         need to be manually aligned
-        :param v:
         :return:
         """
         if batteryTimes > 0:
@@ -128,7 +129,7 @@ class FeatGenerator:
                 "duration"    : duration,
                 "batteryTimes": batteryTimes
             })
-        except Exception as e:
+        except:
             return self.preGenFeatModel(have_tried + 1)
         else:
             return {
@@ -151,7 +152,7 @@ class FeatGenerator:
 
         data = dict(
             **predata,
-            storyTime=self._gen_floats((0, 5, 10, 30, 100))[0],
+            storyTime=self._gen_floats((FEAT_STORYTIME_MIN, 5, 10, 30, FEAT_STORYTIME_MAX))[0],
             tutorialTime=self._gen_floats((0, 5, 18, 40, 100))[0],
             difficultyLevel=self._gen_choices(FeatDifficultyLevel)[0],
             replayTimes=self._gen_bools()[0],
