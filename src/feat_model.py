@@ -7,8 +7,8 @@ create: Aug 13, 2022, 22:31
 from pydantic import BaseModel, validator
 
 from config.feats import FEAT_TUTORIALTIME_MAX, FEAT_STORYTIME_MAX, FEAT_MOVENUM_MAX, FEAT_KEEPAWAY_MAX, \
-    FEAT_SCORE_MAX, FEAT_CLICKRATE_MAX, FEAT_IMPULSETIMES_MAX, FEAT_SIGNALTIMES_MAX, FEAT_FILTERLENTIMES, \
-    FEAT_BATTERYTIME_MAX, FEAT_LIFETIME_MAX
+    FEAT_SCORE_MAX, FEAT_CLICKRATE_MAX, FEAT_IMPULSETIMES_MAX, FEAT_SIGNALTIMES_MAX, FEAT_FILTERLENTIMES_MAX, \
+    FEAT_BATTERYTIMES_MAX, FEAT_LIFETIME_MAX, FEAT_NPCHITRATE_MAX
 from ds import FeatDifficultyLevel, FeatGiftType, FeatRealScore
 from utils.log import get_logger
 from utils.strict_feilds import strict_int, strict_float, strict_percent
@@ -37,11 +37,11 @@ class FeatModel(BaseModel):
 
     intClickFreq: strict_int(le=FEAT_CLICKRATE_MAX)  # (100, 830, 2000)
     isDuration: int  # bool # 0. 中途退出，1. 坚持最后
-    intBatteryTimes: strict_int(le=FEAT_BATTERYTIME_MAX)  # (0, 2, 5)
+    intBatteryTimes: strict_int(le=FEAT_BATTERYTIMES_MAX)  # (0, 2, 5)
 
     intLifetime: strict_int(le=FEAT_LIFETIME_MAX)  # max: 660
 
-    intFilterLenTimes: strict_int(le=FEAT_FILTERLENTIMES)  # (0,2,5)
+    intFilterLenTimes: strict_int(le=FEAT_FILTERLENTIMES_MAX)  # (0,2,5)
     intSignalTimes: strict_int(le=FEAT_SIGNALTIMES_MAX)  # (0,2,5)
     intImpulseTimes: strict_int(le=FEAT_IMPULSETIMES_MAX)  # (0, 2,5)
 
@@ -58,7 +58,7 @@ class FeatModel(BaseModel):
     pctFeedback: strict_percent()
     pctGoodRate: strict_percent()
     fMoveNum: strict_float(le=FEAT_MOVENUM_MAX)  # (5, 40, 100)
-    pctNpcHitRate: strict_percent()
+    floatNpcHitRate: strict_float(le=FEAT_NPCHITRATE_MAX)
     pctGetbackRate: strict_percent()
     isAcceptGift: int  # bool
     enumGiftType: FeatGiftType
@@ -117,7 +117,7 @@ if __name__ == '__main__':
         pctMismatchRate=0.,
         pctFeedback=0.,
         pctGoodRate=0.,
-        pctNpcHitRate=0.,
+        floatNpcHitRate=0.,
         pctGetbackRate=0.,
     )
     logger.info(f'feat: {feat}')

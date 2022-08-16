@@ -26,13 +26,16 @@ CONFIG_COLUMNS_MAP_PATH = SRC_CONFIG_PATH / "columns_map.json"
 # /
 PROJECT_DIR = SRC_DIR.parent
 
-# /x/
-DATA_DIR = PROJECT_DIR / 'x'
+# /data/
+DATA_DIR = PROJECT_DIR / 'data'
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # /output/
 OUTPUT_DIR = PROJECT_DIR / 'output'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# /output/users.json
+USERS_DATA_PATH = OUTPUT_DIR / "users.json"
 
 # /logs/
 LOGS_DIR = PROJECT_DIR / "logs"

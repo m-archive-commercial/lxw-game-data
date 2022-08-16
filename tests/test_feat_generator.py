@@ -13,7 +13,7 @@ from feat_generator import FeatGenerator
 class TestFeatGenerator(TestCase):
     def test__gen_floats(self):
         feat_generator = FeatGenerator()
-        v = feat_generator._gen_floats((0, 100, 830, 2000, 3000))
+        v = feat_generator._genFloats((0, 100, 830, 2000, 3000))
         print(v)
         self.assertEqual(len(v[v > 0]), 500)
 

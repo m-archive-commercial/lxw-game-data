@@ -26,6 +26,10 @@ class BaseSolver:
         self._x2y = None
 
     @property
+    def xdata(self):
+        return self._xdata
+
+    @property
     def _yMin(self):
         return self._ydata[0]
 

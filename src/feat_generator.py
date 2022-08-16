@@ -6,24 +6,29 @@ create: Aug 14, 2022, 00:36
 from __future__ import annotations
 
 import json
+from enum import Enum
 from typing import List, Type
 
 import numpy as np
 import pandas as pd
 import tqdm
 
-from config.feats import FEAT_STORYTIME_MAX
+from config.feats import FEAT_STORYTIME_MAX, FEAT_SIGNALTIMES_MAX, FEAT_FILTERLENTIMES_MAX, FEAT_BATTERYTIMES_MAX, \
+    FEAT_IMPULSETIMES_MAX
 from config.model import DEFAULT_NUM_MODELS_TO_GEN
 from ds import ExtendedEnum, FeatDifficultyLevel, FeatGiftType, FeatRealScore
 from feat_model import FeatModel
 from solver.baseSolver import BaseSolver
-from solver.polynomialSolver import PolynomialSolver
-from utils.config_path import OUTPUT_DIR, CONFIG_COLUMNS_MAP_PATH
+from solver.linearSmoothSolver import LinearSmoothSolver
+from utils.config_path import OUTPUT_DIR, CONFIG_COLUMNS_MAP_PATH, USERS_DATA_PATH
 from utils.log import get_logger
 from utils.regenerate_field import regenerate
 from utils.validator_feats import validateHitRate, validateImpulseTimes, validateLifetime
 
 logger = get_logger('FeatGenerator')
+
+with open(CONFIG_COLUMNS_MAP_PATH, 'r') as f:
+    colsMap = json.load(f)
 
 
 class FeatGenerator:
@@ -34,7 +39,6 @@ class FeatGenerator:
         nModelsToGen=DEFAULT_NUM_MODELS_TO_GEN,
         nModelsEpoch=1,
         nMaxGenRetries=10,
-        perturbation=0.3,
     ):
         """
 
@@ -45,67 +49,81 @@ class FeatGenerator:
         self._nModelsToGen = nModelsToGen
         self._nModelsEpoch = nModelsEpoch
         self._nMaxGenRetries = nMaxGenRetries
-        self._perturbation = perturbation
+
+        self._perturbation = 0
+        self._user = None
 
         self._feat_models: List[FeatModel] = []
 
-    @property
-    def xdata(self):
-        """
-        todo: test
-        :return:
-        """
-        d = (1 - self._perturbation) / 2
-        return [0, .5 - d, .5, .5 + d, 1]
+    def setPerturbation(self, v):
+        self._perturbation = v
+        return self
 
-    def _gen_floats(self, ys, xs=None):
+    def setUser(self, user):
+        self._user = user
+        return self
+
+    def _genFloats(self, ys, xs=None, target=None, ):
         if xs:
             self._solver.setXdata(xs)
-        return self._solver.setYdata(ys).fit().generate(self._nModelsEpoch)
+        result = self._solver.setYdata(ys).fit().generate(self._nModelsEpoch)
+        if target and self._user is not None:
+            """
+            扰动为0 --> 全部为目标值
+            扰动为1 --> 全部为随机值
+            """
+            result = self._perturbation * result + (1 - self._perturbation) * target
+        return result
 
-    def _gen_ints(self, ys, xs=None):
+    def _genInts(self, ys, xs=None, target=None, ):
         """
         tip: here we can use .astype(int) since we didn't use the `StrictInt`
         :param ys:
         :return:
         """
-        return self._gen_floats(ys, xs).astype(int)
+        result = self._genFloats(ys, xs).astype(int)
+        if target and self._user is not None:
+            result = np.round(self._perturbation * result + (1 - self._perturbation) * target).astype(int)
+        return result
 
-    def _gen_percents(self, xs=None):
-        """
-        percent can be generated linearly, which is the same args like `xdata`
-        :return:
-        """
-        return self._gen_floats(self._solver.xdata, xs)
+    def _genBools(self, target=None):
+        result = np.random.random(self._nModelsEpoch) > 0.5
+        if target and self._user is not None:
+            result = np.round(self._perturbation * result + (1 - self._perturbation) * target)
+        return result
 
-    def _gen_bools(self):
-        return np.random.random(self._nModelsEpoch) > 0.5
-
-    def _gen_choices(self, choices: Type[ExtendedEnum]):
+    def _gen_choices(self, choices: Type[ExtendedEnum], target=None):
         """
         :param choices: Type[Enum] need
         :return:
         """
-        return np.random.choice(choices, self._nModelsEpoch)
+        result = np.random.choice(choices, self._nModelsEpoch)
+        if target and self._user is not None:
+            result = np.round(self._perturbation * result + (1 - self._perturbation) * target)
+        return result
 
     def _genFeatOfLifetime(self, batteryTimes):
         """
         need to be manually aligned
+        todo: add the `target` benchmark
         :return:
         """
         if batteryTimes > 0:
             return 60 + batteryTimes * 30
         return regenerate(
-            lambda: self._gen_ints(60),
+            lambda: self._genInts(60),
             lambda v: True
         )
 
     def _genFeatOfRealScore(self, isUpload):
         if isUpload == 0:
             return FeatRealScore.NO_DATA
-        return self._gen_choices(FeatRealScore)[0]
+        return self._gen_choices(FeatRealScore, target=self._getUserFeat('enumRealScore'))[0]
 
-    def _preGenFeatModel(self, have_tried=0):
+    def _getUserFeat(self, varName):
+        return None if self._user is None else self._user[colsMap[varName]]
+
+    def _genPreModel(self, have_tried=0):
         """
         fScore --> pctHitRate
         fScore, intClickFreq, isDuration, intBatteryTimes --> intLifetime
@@ -114,106 +132,135 @@ class FeatGenerator:
         logger.debug('generating pre-feats')
         assert have_tried < self._nMaxGenRetries, f"gen featModel failed for {self._nMaxGenRetries} tries"
 
-        score = self._gen_floats((0, 5, 40, 100, 200))[0]
-        hitRate = self._gen_percents()[0]
+        fScore = self._genFloats((0, 5, 40, 100, 200), target=self._getUserFeat('fScore'))[0]
+        pctHitRate = self._genFloats(
+            (0, .1, .5, .9, 1),
+            # hitRate应该保证80%的数据结果都在50%以上
+            xs=(0, .1, .2, .5, 1),
+            target=self._getUserFeat('pctHitRate'))[0]
 
-        batteryTimes = self._gen_ints((0, 0, 2, 5, 20))[0]
-        filterLenTimes = self._gen_ints((0, 1, 2, 5, 20))[0]
-        signalTimes = self._gen_ints((0, 1, 2, 5, 20))[0]
-        impulseTimes = self._gen_ints((0, 1, 2, 5, 20))[0]
+        intBatteryTimes = self._genInts(
+            (0, 0, 2, 5, FEAT_BATTERYTIMES_MAX),
+            target=self._getUserFeat('intBatteryTimes')
+        )[0]
+        intFilterLenTimes = self._genInts(
+            (0, 1, 2, 5, FEAT_FILTERLENTIMES_MAX),
+            target=self._getUserFeat('intFilterLenTimes')
+        )[0]
+        intSignalTimes = self._genInts(
+            (0, 1, 2, 5, FEAT_SIGNALTIMES_MAX),
+            target=self._getUserFeat('intSignalTimes')
+        )[0]
+        intImpulseTimes = self._genInts(
+            (0, 1, 2, 5, FEAT_IMPULSETIMES_MAX),
+            target=self._getUserFeat('intImpulseTimes')
+        )[0]
 
-        clickRate = self._gen_ints((0, 100, 830, 2000, 3000))[0]
-        duration = self._gen_bools()[0]
-        lifetime = self._genFeatOfLifetime(batteryTimes)
+        intClickFreq = self._genInts((0, 100, 830, 2000, 3000),
+            target=self._getUserFeat('intClickFreq'))[0]
+        isDuration = self._genBools(target=self._getUserFeat('isDuration'))[0]
+        intLifetime = self._genFeatOfLifetime(intBatteryTimes)
 
-        isUpload = self._gen_bools()[0]
-        realScore = self._genFeatOfRealScore(isUpload)
+        isUpload = self._genBools(target=self._getUserFeat('isUpload'))[0]
+        enumRealScore = self._genFeatOfRealScore(isUpload)
 
         try:
-            validateHitRate(hitRate, {'fScore': score})
-            validateImpulseTimes(impulseTimes, {
-                "intBatteryTimes"  : batteryTimes,
-                "intFilterLenTimes": filterLenTimes,
-                "intSignalTimes"   : signalTimes
+            validateHitRate(pctHitRate, {'fScore': fScore})
+            validateImpulseTimes(intImpulseTimes, {
+                "intBatteryTimes"  : intBatteryTimes,
+                "intFilterLenTimes": intFilterLenTimes,
+                "intSignalTimes"   : intSignalTimes
             })
-            validateLifetime(lifetime, {
-                "fScore"         : score,
-                "intClickFreq"   : clickRate,
-                "isDuration"     : duration,
-                "intBatteryTimes": batteryTimes
+            validateLifetime(intLifetime, {
+                "fScore"         : fScore,
+                "intClickFreq"   : intClickFreq,
+                "isDuration"     : isDuration,
+                "intBatteryTimes": intBatteryTimes
             })
         except Exception as e:
             logger.debug(e.args)
-            return self._preGenFeatModel(have_tried + 1)
+            return self._genPreModel(have_tried + 1)
         else:
             return {
-                "fScore"           : score,
-                "pctHitRate"       : hitRate,
-                "intBatteryTimes"  : batteryTimes,
-                "intFilterLenTimes": filterLenTimes,
-                "intSignalTimes"   : signalTimes,
-                "intImpulseTimes"  : impulseTimes,
-                "intClickFreq"     : clickRate,
-                "isDuration"       : duration,
-                "intLifetime"      : lifetime,
+                "fScore"           : fScore,
+                "pctHitRate"       : pctHitRate,
+                "intBatteryTimes"  : intBatteryTimes,
+                "intFilterLenTimes": intFilterLenTimes,
+                "intSignalTimes"   : intSignalTimes,
+                "intImpulseTimes"  : intImpulseTimes,
+                "intClickFreq"     : intClickFreq,
+                "isDuration"       : isDuration,
+                "intLifetime"      : intLifetime,
                 "isUpload"         : isUpload,
-                "enumRealScore"    : realScore,
+                "enumRealScore"    : enumRealScore,
             }
 
-    def genFeatModel(self) -> FeatModel:
+    def genModel(self) -> dict:
         logger.debug('generating feats')
-        predata = self._preGenFeatModel()
+        preModel = self._genPreModel()
 
         data = dict(
-            **predata,
-            fStoryTime=self._gen_floats((0, 5, 10, 30, FEAT_STORYTIME_MAX))[0],
-            fTutorialTime=self._gen_floats((0, 5, 18, 40, 100))[0],
-            fKeepaway=self._gen_floats((0, 5, 60, 100, 200))[0],
-            fMoveNum=self._gen_floats((0, 5, 40, 100, 200))[0],
+            **preModel,
+            fStoryTime=self._genFloats((0, 5, 10, 30, FEAT_STORYTIME_MAX), target=self._getUserFeat('fStoryTime'))[0],
+            fTutorialTime=self._genFloats((0, 5, 18, 40, 100), target=self._getUserFeat('fTutorialTime'))[0],
+            fKeepaway=self._genFloats((0, 5, 60, 100, 200), target=self._getUserFeat('fKeepaway'))[0],
+            fMoveNum=self._genFloats((0, 5, 40, 100, 200), target=self._getUserFeat('fMoveNum'))[0],
 
-            enumDifficultyLevel=self._gen_choices(FeatDifficultyLevel)[0],
-            enumGiftType=self._gen_choices(FeatGiftType)[0],
+            enumDifficultyLevel=self._gen_choices(FeatDifficultyLevel, target=self._getUserFeat('enumDifficultyLevel'))[
+                0],
+            enumGiftType=self._gen_choices(FeatGiftType, target=self._getUserFeat('enumGiftType'))[0],
 
-            isReplayed=self._gen_bools()[0],
-            isAcceptGift=self._gen_bools()[0],
-            isBug=self._gen_bools()[0],
-            isMorePolicy=self._gen_bools()[0],
+            isReplayed=self._genBools(target=self._getUserFeat('isReplayed'))[0],
+            isAcceptGift=self._genBools(target=self._getUserFeat('isAcceptGift'))[0],
+            isBug=self._genBools(target=self._getUserFeat('isBug'))[0],
+            isMorePolicy=self._genBools(target=self._getUserFeat('isMorePolicy'))[0],
 
-            pctBadRate=self._gen_floats(
+            pctBadRate=self._genFloats(
                 # badRate值域改成0-70%吧
                 [0, .1, .3, .5, .7],
+                target=self._getUserFeat('pctBadRate')
             )[0],
-            pctMismatchRate=self._gen_floats(
+            pctMismatchRate=self._genFloats(
                 # mismatchRate 应该保证80%的数据结果都在20%以下
                 [0, .05, .1, .2, 1],
-                [0, .1, .5, .8, 1]
+                xs=[0, .1, .5, .8, 1],
+                target=self._getUserFeat('pctMismatchRate'),
             )[0],
-            pctFeedback=self._gen_percents()[0],
-            pctGoodRate=self._gen_percents()[0],
-            pctNpcHitRate=self._gen_floats(
-                # hitRate应该保证80%的数据结果都在50%以上
-                [0, .3, .5, .7, 1],
-                [0, .1, .2, .8, 1]
+            pctFeedback=self._genFloats([0, .1, .5, .9, 1], target=self._getUserFeat('pctFeedback'))[0],
+            pctGoodRate=self._genFloats([0, .1, .5, .9, 1], target=self._getUserFeat('pctGoodRate'))[0],
+            floatNpcHitRate=self._genFloats(
+                [0, 1, 3, 5, 10],
+                target=self._getUserFeat('floatNpcHitRate'),
             )[0],
-            pctGetbackRate=self._gen_floats(
+            pctGetbackRate=self._genFloats(
                 # getbackRate 应该保证80%的数据结果都在50%以下
                 [0, .1, .3, .5, .1],
-                [0, .1, .5, .8, 1]
+                xs=[0, .1, .5, .8, 1],
+                target=self._getUserFeat('pctGetbackRate'),
             )[0],
         )
-        feat_model = FeatModel(**data)
-        self._feat_models.append(feat_model)
-        logger.debug(f'generated feat model: {feat_model}')
-        return feat_model
+        model = FeatModel(**data)
+        self._feat_models.append(model)
+        logger.debug(f'generated feat gModel: {model}')
+        result = dict(**self._user)
+        for k, v in model.dict().items():
+            try:
+                k = self._getUserFeat(k)
+            except KeyError:
+                logger.debug(f'not found key in user data inputted(from excel): {k}')
+            finally:
+                result[k] = v
+        return result
 
-    def genFeatModels(self) -> FeatGenerator:
+    def genFeatModels(self) -> List[dict]:
         total_tries = 0
         failed_tries = 0
+        results = []
         for _ in tqdm.tqdm(range(self._nModelsToGen)):
             while True:
                 try:
                     total_tries += 1
-                    self.genFeatModel()
+                    results.append(self.genModel())
                 except Exception as e:
                     logger.debug(e.args)
                     failed_tries += 1
@@ -229,7 +276,7 @@ class FeatGenerator:
                 "total" : total_tries
             }
         })
-        return self
+        return results
 
     def dump(self, fn=None):
         df = pd.DataFrame([dict(i) for i in self._feat_models])
@@ -256,6 +303,26 @@ class FeatGenerator:
 
 
 if __name__ == '__main__':
-    fg = FeatGenerator(solver=PolynomialSolver())
-    fg.genFeatModels()
-    fg.dump(fn='test.csv')
+    class Mode(str, Enum):
+        GEN_SINGLE_MODEL = "gen-single-gModel"
+        GEN_AND_DUMP_ALL = "gen-and-dump-all"
+
+    mode = Mode.GEN_SINGLE_MODEL
+
+    gSolver = LinearSmoothSolver() \
+        .setPeakRatio(.3) \
+        .setMainSpace(.8)
+
+    with open(USERS_DATA_PATH, 'r') as f:
+        users = json.load(f)
+    fg = FeatGenerator(solver=gSolver) \
+        .setUser(users[0]) \
+        .setPerturbation(.3)
+
+    if mode == Mode.GEN_AND_DUMP_ALL:
+        fg.genFeatModels()
+        fg.dump(fn='test.csv')
+
+    elif mode == Mode.GEN_SINGLE_MODEL:
+        gModels = [fg.genModel() for i in range(10)]
+        logger.info(gModels)
