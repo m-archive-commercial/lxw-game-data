@@ -8,21 +8,46 @@ cd src
 # check help
 python main.py -h
 
-# generate 500 valid sample and dump to csv
-python main.py -n 500 -d
+usage: main.py [-h] [--no-regen-users] [--no-dump] [--users-cnt USERS_CNT] [--user-times USER_TIMES] [--perturbation PERTURBATION] [--main-space MAIN_SPACE] [--nMaxGenRetries NMAXGENRETRIES]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --no-regen-users      regenerate users data from xlsx to json
+  --no-dump             dump the feature models to file
+  --users-cnt USERS_CNT
+                        users to generate
+  --user-times USER_TIMES
+                        run times of each user
+  --perturbation PERTURBATION
+                        perturbation based on the target value, range: (0, 1), 0: always target; 1: always random
+  --main-space MAIN_SPACE
+                        decides the main space based on center on domain; range: (0,1); 0: normal, 1: always center
+  --nMaxGenRetries NMAXGENRETRIES
+                        number of retrying to generate models in each epoch, recommending 5-10
+
 ```
 
 ### running result
 
 ```text
-(venv) 2022/08/15 17:30:08 (base) ➜  src git:(main) ✗ python main.py -n 500 -d
-100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 500/500 [05:46<00:00,  1.44it/s]
-2022-08-15 17:36:21,690 INFO     [feat_generator.py:196] <FeatGenerator> {'config': {'target models': 500, 'max retries': 10}, 'tries': {'failed': 652, 'total': 1152}}
-2022-08-15 17:36:21,713 INFO     [feat_generator.py:229] <FeatGenerator> dumped to file:///Users/mark/PycharmProjects/lxw-game-data/output/feat_models.csv
+/Users/mark/coding/PycharmProjects/lxw-game-data/venv/bin/python /Users/mark/coding/PycharmProjects/lxw-game-data/src/main.py
+2022-08-16 17:48:35,036 INFO     [main.py:77] <MAIN> Namespace(no_regen_users=False, no_dump=False, users_cnt=50, user_times=10, perturbation=0.3, main_space=0.8, nMaxGenRetries=10)
+2022-08-16 17:48:35,365 INFO     [regeneate_users.py:21] <utils-regen-users> read data from file:///Users/mark/coding/PycharmProjects/lxw-game-data/data/精简版数据集.xlsx
+2022-08-16 17:48:35,419 INFO     [regeneate_users.py:27] <utils-regen-users> regenerated users to file:///Users/mark/coding/PycharmProjects/lxw-game-data/output/users.json
+100%|██████████| 50/50 [00:00<00:00, 60.42it/s]
+2022-08-16 17:48:36,269 INFO     [main.py:97] <MAIN> done generating all the 50 users with 500 models
+2022-08-16 17:48:36,297 INFO     [dump.py:38] <utils-dump> dumped to file:///Users/mark/coding/PycharmProjects/lxw-game-data/output/models.csv
 
+Process finished with exit code 0
 ```
 
 ## Track
+
+### 2022/08/16
+
+主要是原数据表数据有较大问题，导致生成经常有bug。
+
+减弱一些限制条件、修改一些原数据后已能顺利输出程序。
 
 ### 2022/08/15
 
@@ -32,8 +57,8 @@ python main.py -n 500 -d
 #### validation
 
 data relative:
-- [ ] 1.输出的格式应该和原数据集保持一致，就是性别年龄什么的都带上。特别是五个人格得分应该每一行都有。
-- [ ] 2.目前是500个数据，但是重点是10个为一组，这一组的是同一个人的，因此性别年龄五个人格得分应该相同，并且这个分组在数据集要有体现（比如同一个userID）。
+- [x] 1.输出的格式应该和原数据集保持一致，就是性别年龄什么的都带上。特别是五个人格得分应该每一行都有。
+- [x] 2.目前是500个数据，但是重点是10个为一组，这一组的是同一个人的，因此性别年龄五个人格得分应该相同，并且这个分组在数据集要有体现（比如同一个userID）。
 
 table relative:
 - [x] 10.属性列的顺序能不能和原有数据集保持一致，这样我好复用一些代码

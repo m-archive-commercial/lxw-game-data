@@ -6,6 +6,7 @@ create: Aug 14, 2022, 00:36
 from __future__ import annotations
 
 import json
+import random
 from enum import Enum
 from typing import List, Type
 
@@ -14,21 +15,20 @@ import pandas as pd
 import tqdm
 
 from config.feats import FEAT_STORYTIME_MAX, FEAT_SIGNALTIMES_MAX, FEAT_FILTERLENTIMES_MAX, FEAT_BATTERYTIMES_MAX, \
-    FEAT_IMPULSETIMES_MAX
+    FEAT_IMPULSETIMES_MAX, FEAT_NPCHITRATE_MAX, FEAT_BADRATE_MAX
 from config.model import DEFAULT_NUM_MODELS_TO_GEN
 from ds import ExtendedEnum, FeatDifficultyLevel, FeatGiftType, FeatRealScore
 from feat_model import FeatModel
 from solver.baseSolver import BaseSolver
 from solver.linearSmoothSolver import LinearSmoothSolver
-from utils.config_path import OUTPUT_DIR, CONFIG_COLUMNS_MAP_PATH, USERS_DATA_PATH
+from utils.config_path import OUTPUT_DIR, CONFIG_COLUMNS_MAP_PATH
 from utils.log import get_logger
-from utils.regenerate_field import regenerate
 from utils.validator_feats import validateHitRate, validateImpulseTimes, validateLifetime
 
 logger = get_logger('FeatGenerator')
 
-with open(CONFIG_COLUMNS_MAP_PATH, 'r') as f:
-    colsMap = json.load(f)
+with open(CONFIG_COLUMNS_MAP_PATH, 'r') as config_columns_map_file:
+    colsMap = json.load(config_columns_map_file)
 
 
 class FeatGenerator:
@@ -61,6 +61,7 @@ class FeatGenerator:
 
     def setUser(self, user):
         self._user = user
+        logger.debug(user)
         return self
 
     def _genFloats(self, ys, xs=None, target=None, ):
@@ -102,7 +103,8 @@ class FeatGenerator:
             result = np.round(self._perturbation * result + (1 - self._perturbation) * target)
         return result
 
-    def _genFeatOfLifetime(self, batteryTimes):
+    @staticmethod
+    def _genFeatOfLifetime(batteryTimes):
         """
         need to be manually aligned
         todo: add the `target` benchmark
@@ -110,18 +112,18 @@ class FeatGenerator:
         """
         if batteryTimes > 0:
             return 60 + batteryTimes * 30
-        return regenerate(
-            lambda: self._genInts(60),
-            lambda v: True
-        )
+        return int(random.random() * 59 + 1)
 
     def _genFeatOfRealScore(self, isUpload):
         if isUpload == 0:
             return FeatRealScore.NO_DATA
         return self._gen_choices(FeatRealScore, target=self._getUserFeat('enumRealScore'))[0]
 
+    def _getUserField(self, varName):
+        return colsMap[varName]
+
     def _getUserFeat(self, varName):
-        return None if self._user is None else self._user[colsMap[varName]]
+        return None if self._user is None else self._user[self._getUserField(varName)]
 
     def _genPreModel(self, have_tried=0):
         """
@@ -129,7 +131,6 @@ class FeatGenerator:
         fScore, intClickFreq, isDuration, intBatteryTimes --> intLifetime
         intBatteryTimes, intFilterLenTimes, intSignalTimes --> intImpulseTimes
         """
-        logger.debug('generating pre-feats')
         assert have_tried < self._nMaxGenRetries, f"gen featModel failed for {self._nMaxGenRetries} tries"
 
         fScore = self._genFloats((0, 5, 40, 100, 200), target=self._getUserFeat('fScore'))[0]
@@ -156,8 +157,10 @@ class FeatGenerator:
             target=self._getUserFeat('intImpulseTimes')
         )[0]
 
-        intClickFreq = self._genInts((0, 100, 830, 2000, 3000),
-            target=self._getUserFeat('intClickFreq'))[0]
+        intClickFreq = self._genInts(
+            (0, 100, 830, 2000, 3000),
+            target=self._getUserFeat('intClickFreq')
+        )[0]
         isDuration = self._genBools(target=self._getUserFeat('isDuration'))[0]
         intLifetime = self._genFeatOfLifetime(intBatteryTimes)
 
@@ -196,7 +199,6 @@ class FeatGenerator:
             }
 
     def genModel(self) -> dict:
-        logger.debug('generating feats')
         preModel = self._genPreModel()
 
         data = dict(
@@ -217,7 +219,7 @@ class FeatGenerator:
 
             pctBadRate=self._genFloats(
                 # badRate值域改成0-70%吧
-                [0, .1, .3, .5, .7],
+                [0, .1, .3, .5, FEAT_BADRATE_MAX],
                 target=self._getUserFeat('pctBadRate')
             )[0],
             pctMismatchRate=self._genFloats(
@@ -229,27 +231,24 @@ class FeatGenerator:
             pctFeedback=self._genFloats([0, .1, .5, .9, 1], target=self._getUserFeat('pctFeedback'))[0],
             pctGoodRate=self._genFloats([0, .1, .5, .9, 1], target=self._getUserFeat('pctGoodRate'))[0],
             floatNpcHitRate=self._genFloats(
-                [0, 1, 3, 5, 10],
+                [0, 1, 3, 5, FEAT_NPCHITRATE_MAX],
                 target=self._getUserFeat('floatNpcHitRate'),
             )[0],
             pctGetbackRate=self._genFloats(
                 # getbackRate 应该保证80%的数据结果都在50%以下
-                [0, .1, .3, .5, .1],
+                [0, .1, .3, .5, 1],
                 xs=[0, .1, .5, .8, 1],
                 target=self._getUserFeat('pctGetbackRate'),
             )[0],
         )
+        logger.debug(data)
         model = FeatModel(**data)
         self._feat_models.append(model)
-        logger.debug(f'generated feat gModel: {model}')
         result = dict(**self._user)
         for k, v in model.dict().items():
-            try:
-                k = self._getUserFeat(k)
-            except KeyError:
-                logger.debug(f'not found key in user data inputted(from excel): {k}')
-            finally:
-                result[k] = v
+            k = self._getUserField(k)
+            result[k] = v
+        logger.debug(result)
         return result
 
     def genFeatModels(self) -> List[dict]:
@@ -278,50 +277,63 @@ class FeatGenerator:
         })
         return results
 
-    def dump(self, fn=None):
-        df = pd.DataFrame([dict(i) for i in self._feat_models])
-
-        # ref: [python - applying a method to a few selected columns in a pandas dataframe - Stack Overflow](https://stackoverflow.com/questions/51306491/applying-a-method-to-a-few-selected-columns-in-a-pandas-dataframe)
-        cols_pct = [i for i in list(df.columns) if i.startswith('pct')]
-        df[cols_pct] = df[cols_pct].applymap(lambda v: f"{v * 100:05.02f}%")
-
-        fp = OUTPUT_DIR / (fn or 'feat_models.csv')
-
-        # failed
-        # [pandas format float decimal places Code Example](https://www.codegrepper.com/code-examples/python/pandas+format+float+decimal+places)
-        # pd.set_option('precision', 1)
-
-        with open(CONFIG_COLUMNS_MAP_PATH, "r") as f:
-            cols = json.load(f)
-        df.rename(columns=cols, inplace=True)
-        # reorder cols, ref: https://stackoverflow.com/a/23741480/9422455
-        df = df[cols.values()]
-
-        # ref: [python - float64 with pandas to_csv - Stack Overflow](https://stackoverflow.com/questions/12877189/float64-with-pandas-to-csv)
-        df.to_csv(fp.__str__(), encoding='utf_8', float_format='%.1f')
-        logger.info(f'dumped to file://{fp}')
-
 
 if __name__ == '__main__':
     class Mode(str, Enum):
         GEN_SINGLE_MODEL = "gen-single-gModel"
         GEN_AND_DUMP_ALL = "gen-and-dump-all"
 
+
     mode = Mode.GEN_SINGLE_MODEL
 
     gSolver = LinearSmoothSolver() \
-        .setPeakRatio(.3) \
         .setMainSpace(.8)
 
-    with open(USERS_DATA_PATH, 'r') as f:
-        users = json.load(f)
+    gSampleUser = {
+        "user_id"        : 1,
+        "gender"         : "男",
+        "age"            : 27,
+        "study_bg"       : "硕士及以上",
+        "extr_1"         : 3.375,
+        "agre_1"         : 3.22222232818603,
+        "cons_1"         : 3.77777767181396,
+        "neur_1"         : 2.75,
+        "open_1"         : 3.59999990463257,
+        "storyTime"      : 0.9,
+        "isAcceptGift"   : 1,
+        "difficultyLevel": 1,
+        "tutorialTime"   : 0.8,
+        "duration"       : 1,
+        "clickRate"      : 96.0,
+        "goodRate"       : 0.5423729,
+        "moveNum"        : 81,
+        "npcHitRate"     : 1.833333,
+        "keepaway"       : 119.5539,
+        "hitRate"        : 0.5762712,
+        "feedback"       : 0.5423729,
+        "score1"         : 8.9,
+        "batteryTimes"   : 2,
+        "getbackRate"    : 0.0,
+        "mismatchRate"   : 0.02941176,
+        "badRate"        : 0.4576271,
+        "giftType"       : 0,
+        "isUpload"       : 0,
+        "IsRealScore"    : 0,
+        "bugTimes"       : 0,
+        "replayTimes"    : 0,
+        "filterLenTimes" : 1,
+        "signalTimes"    : 0,
+        "impulseTimes"   : 0,
+        "morePolicy"     : 0
+    }
+
     fg = FeatGenerator(solver=gSolver) \
-        .setUser(users[0]) \
+        .setUser(gSampleUser) \
         .setPerturbation(.3)
 
     if mode == Mode.GEN_AND_DUMP_ALL:
         fg.genFeatModels()
-        fg.dump(fn='test.csv')
+        # fg.dump(fn='test.csv')
 
     elif mode == Mode.GEN_SINGLE_MODEL:
         gModels = [fg.genModel() for i in range(10)]

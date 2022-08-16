@@ -21,7 +21,6 @@ class BaseSolver:
     ):
         self._xdata = DEFAULT_XDATA
         self._ydata = None
-        self._peakRatio = 0
 
         self._x2y = None
 
@@ -64,10 +63,6 @@ class BaseSolver:
         logger.debug(f'xdata: {self._xdata}')
         return self
 
-    def setPeakRatio(self, v):
-        self._peakRatio = v
-        return self
-
     def setXdata(self, v):
         self._xdata = v
         return self
@@ -78,7 +73,7 @@ class BaseSolver:
 
     def setPCF(self, pcf):
         def pcf2xy(x):
-            ratioFromLeft = pcf(peak(x, self._peakRatio))
+            ratioFromLeft = pcf(x)
             return self._yMin * (1 - ratioFromLeft) + ratioFromLeft * self._yMax
 
         self._x2y = pcf2xy
@@ -88,16 +83,10 @@ class BaseSolver:
         raise NotImplementedError
 
     def generate(self, N: int) -> np.ndarray:
-        """
-
-        :param N:
-        :param toPeak: [0, 1], default: 0.5
-        :return:
-        """
         # ref: https://stackoverflow.com/questions/35215161/most-efficient-way-to-map-function-over-numpy-array
         return self._x2y(np.random.random(N))
 
-    def plotBoth(self, nFit=100, nGen=1000, bins=100, toPeak=None):
+    def plotBoth(self, nFit=100, nGen=1000, bins=100):
         fig, axes = plt.subplots(2, 1)
         # for pcf, domain is (0, 1)
         xdata = np.linspace(0, 1, nFit, endpoint=False)

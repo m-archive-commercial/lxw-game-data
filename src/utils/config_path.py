@@ -35,7 +35,8 @@ OUTPUT_DIR = PROJECT_DIR / 'output'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # /output/users.json
-USERS_DATA_PATH = OUTPUT_DIR / "users.json"
+OUTPUT_USERS_DATA_PATH = OUTPUT_DIR / "users.json"
+OUTPUT_MODELS_DATA_PATH = OUTPUT_DIR / 'models.csv'
 
 # /logs/
 LOGS_DIR = PROJECT_DIR / "logs"

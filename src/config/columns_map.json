@@ -1,4 +1,13 @@
 {
+  "user_id": "user_id",
+  "gender": "gender",
+  "age": "age",
+  "study_bg": "study_bg",
+  "extr_1": "extr_1",
+  "agre_1": "agre_1",
+  "cons_1": "cons_1",
+  "neur_1": "neur_1",
+  "open_1": "open_1",
   "fStoryTime": "storyTime",
   "isAcceptGift": "isAcceptGift",
   "enumDifficultyLevel": "difficultyLevel",

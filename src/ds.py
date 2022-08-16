@@ -27,9 +27,9 @@ class FeatDifficultyLevel(int, ExtendedEnum):
 
 
 class FeatGiftType(int, ExtendedEnum):
-    GOOD = 0
-    BAD = 1
-    NONE = 2
+    NONE = 0
+    GOOD = 1
+    BAD = -1
 
 
 class FeatRealScore(int, ExtendedEnum):
